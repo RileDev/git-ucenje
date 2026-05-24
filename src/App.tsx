@@ -135,6 +135,7 @@ export const App: React.FC = () => {
   const [repoState, setRepoState] = useState<RepoState>(() => currentLevel.initialState);
   const [terminalHistory, setTerminalHistory] = useState<{ input?: string; output: string; isError?: boolean }[]>([]);
   const [terminalInput, setTerminalInput] = useState<string>('');
+  const [levelCommandsRun, setLevelCommandsRun] = useState<string[]>([]);
 
   // Prozor stanja
   const [windows, setWindows] = useState<WindowState[]>([
@@ -241,6 +242,7 @@ export const App: React.FC = () => {
       }
     ]);
     setTerminalInput('');
+    setLevelCommandsRun([]);
     setGitkoMsg(`Nivo ${currentLevel.id}: ${currentLevel.title}. Pročitaj uputstvo levo i unesi prvu komandu u terminal!`);
     localStorage.setItem('luna_git_current_level', currentLevelIdx.toString());
   }, [currentLevelIdx]);
@@ -368,9 +370,34 @@ export const App: React.FC = () => {
       currentHist[currentHist.length - 1].output = result.output;
       setTerminalHistory(currentHist);
 
+      // Prati uspešno izvršenu komandu ako počinje sa "git"
+      const parts = cmd.toLowerCase().trim().split(/\s+/);
+      const gitCmd = parts[0];
+      const subCmd = parts[1];
+      
+      let updatedCommandsRun = levelCommandsRun;
+      if (gitCmd === 'git' && subCmd) {
+        const fullCmd = `git ${subCmd}`;
+        if (!levelCommandsRun.includes(fullCmd)) {
+          updatedCommandsRun = [...levelCommandsRun, fullCmd];
+          setLevelCommandsRun(updatedCommandsRun);
+        }
+      }
+
       // Provera validacije nivoa
       const solved = currentLevel.validate(result.newState);
-      if (solved) {
+
+      // Provera da li su sve očekivane komande izvršene
+      const allExpectedRun = currentLevel.expectedCommands.every(cmdName => {
+        const cleanedExpected = cmdName.toLowerCase().trim();
+        // Podrži 'git switch' kao ekvivalent za 'git checkout'
+        if (cleanedExpected === 'git checkout') {
+          return updatedCommandsRun.includes('git checkout') || updatedCommandsRun.includes('git switch');
+        }
+        return updatedCommandsRun.includes(cleanedExpected);
+      });
+
+      if (solved && allExpectedRun) {
         if (soundEnabled) playXpSuccess();
         setGitkoMsg('Fenomenalno! Uspešno si rešio sve zadatke na ovom nivou! Pogledaj sledeći korak.');
 
@@ -381,6 +408,16 @@ export const App: React.FC = () => {
 
         // Prikaži uspeh modal
         setShowLevelSuccessModal(true);
+      } else if (solved && !allExpectedRun) {
+        // Pronađi koje očekivane komande fale
+        const missingCmds = currentLevel.expectedCommands.filter(cmdName => {
+          const cleaned = cmdName.toLowerCase().trim();
+          if (cleaned === 'git checkout') {
+            return !updatedCommandsRun.includes('git checkout') && !updatedCommandsRun.includes('git switch');
+          }
+          return !updatedCommandsRun.includes(cleaned);
+        });
+        setGitkoMsg(`Skoro je gotovo! Uspešno ste podesili repozitorijum, ali da biste zaista savladali nivo, morate isprobati i preostale komande u uputstvu: ${missingCmds.join(', ')}!`);
       } else {
         setGitkoMsg('Dobar korak! Nastavi dalje da pratiš uputstva kako bi rešio nivo.');
       }
