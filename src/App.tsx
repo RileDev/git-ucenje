@@ -25,17 +25,17 @@ const playTone = (freq: number, startTime: number, duration: number, type: Oscil
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-    
+
     osc.type = type;
     osc.frequency.setValueAtTime(freq, startTime);
-    
+
     gain.gain.setValueAtTime(0, startTime);
     gain.gain.linearRampToValueAtTime(volume, startTime + 0.04);
     gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
-    
+
     osc.connect(gain);
     gain.connect(ctx.destination);
-    
+
     osc.start(startTime);
     osc.stop(startTime + duration);
   } catch (e) {
@@ -70,7 +70,7 @@ const parseMarkdownToHtml = (markdown: string): string => {
   const lines = markdown.split('\n');
   const processedLines = lines.map(line => {
     const trimmed = line.trim();
-    
+
     // H1, H2, H3
     if (trimmed.startsWith('### ')) {
       return `<h3 style="font-size: 14px; color: #002e80; margin: 15px 0 8px 0; font-weight: bold; border-bottom: 1px solid #d3e5fa; padding-bottom: 3px; font-family: 'Tahoma', sans-serif;">${trimmed.substring(4)}</h3>`;
@@ -81,39 +81,39 @@ const parseMarkdownToHtml = (markdown: string): string => {
     if (trimmed.startsWith('# ')) {
       return `<h1 style="font-size: 18px; color: #002e80; margin: 20px 0 12px 0; font-weight: bold; font-family: 'Tahoma', sans-serif;">${trimmed.substring(2)}</h1>`;
     }
-    
+
     // Bullet points: * Item or - Item
     const bulletMatch = trimmed.match(/^[\*\-]\s+(.*)/);
     if (bulletMatch) {
       return `<li style="margin-left: 20px; margin-bottom: 6px; list-style-type: disc; font-size: 13px; line-height: 1.5; color: #333;">${bulletMatch[1]}</li>`;
     }
-    
+
     // Numbered lists: 1. Item
     const numberMatch = trimmed.match(/^\d+\.\s+(.*)/);
     if (numberMatch) {
       return `<li style="margin-left: 20px; margin-bottom: 6px; list-style-type: decimal; font-size: 13px; line-height: 1.5; color: #333;">${numberMatch[1]}</li>`;
     }
-    
+
     // Empty line
     if (trimmed === '') {
       return '<div style="height: 8px;"></div>';
     }
-    
+
     // Normal paragraph line
     return `<p style="margin-bottom: 8px; line-height: 1.5; font-size: 13px; color: #333;">${line}</p>`;
   });
-  
+
   let html = processedLines.join('\n');
-  
+
   // Replace inline bold **bold**
   html = html.replace(/\*\*([^*]+)\*\*/g, '<strong style="font-weight: bold; color: #002e80;">$1</strong>');
-  
+
   // Replace inline italic *italic*
   html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-  
+
   // Replace inline code `code`
   html = html.replace(/`([^`]+)`/g, '<code style="background-color: #f0f3fd; border: 1px solid #d3e2f9; border-radius: 3px; padding: 1.5px 5px; font-family: monospace; font-size: 12px; color: #c7254e; font-weight: bold;">$1</code>');
-  
+
   return html;
 };
 
@@ -329,10 +329,10 @@ export const App: React.FC = () => {
       prev.map(w =>
         w.id === info.winId
           ? {
-              ...w,
-              x: Math.max(0, Math.min(window.innerWidth - 100, info.winX + dx)),
-              y: Math.max(0, Math.min(window.innerHeight - 80, info.winY + dy))
-            }
+            ...w,
+            x: Math.max(0, Math.min(window.innerWidth - 100, info.winX + dx)),
+            y: Math.max(0, Math.min(window.innerHeight - 80, info.winY + dy))
+          }
           : w
       )
     );
@@ -372,7 +372,7 @@ export const App: React.FC = () => {
       if (solved) {
         if (soundEnabled) playXpSuccess();
         setGitkoMsg('Fenomenalno! Uspešno si rešio sve zadatke na ovom nivou! Pogledaj sledeći korak.');
-        
+
         // Dodaj u rešene
         const nextCompleted = Array.from(new Set([...completedLevels, currentLevel.id]));
         setCompletedLevels(nextCompleted);
@@ -405,7 +405,7 @@ export const App: React.FC = () => {
     if (!showSolitaire || !solitaireCanvasRef.current) return;
     const canvas = solitaireCanvasRef.current;
     const ctx = canvas.getContext('2d')!;
-    
+
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
@@ -443,11 +443,11 @@ export const App: React.FC = () => {
       ctx.fillStyle = '#ffffff';
       ctx.strokeStyle = '#000000';
       ctx.lineWidth = 1.5;
-      
+
       // Shadow
       ctx.fillStyle = 'rgba(0,0,0,0.1)';
       ctx.fillRect(c.x + 3, c.y + 3, 90, 130);
-      
+
       // Card Body
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(c.x, c.y, 90, 130);
@@ -456,7 +456,7 @@ export const App: React.FC = () => {
       // Card Header Banner
       ctx.fillStyle = c.color;
       ctx.fillRect(c.x + 1, c.y + 1, 88, 25);
-      
+
       // Title
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 11px Tahoma, Arial';
@@ -466,7 +466,7 @@ export const App: React.FC = () => {
       // Card Center Icon
       ctx.font = '28px Arial';
       ctx.fillText('🌿', c.x + 45, c.y + 80);
-      
+
       // Mini label bottom right
       ctx.fillStyle = c.color;
       ctx.font = '9px monospace';
@@ -540,8 +540,8 @@ export const App: React.FC = () => {
           <p>Tehničke informacije:</p>
           <p>*** STOP: 0x000000D1 (0x0000000C, 0x00000002, 0x00000000, 0xF86B5A89)<br />*** luna_git_engine.sys - Address F86B5A89 base at F86B0000, DateStamp 36b072a3</p>
           <p>Kliknite na dugme ispod za brzi restart operativnog sistema:</p>
-          <button 
-            className="xp-bsod-btn" 
+          <button
+            className="xp-bsod-btn"
             onClick={() => {
               setShowBSOD(false);
               playXpStartup();
@@ -588,7 +588,7 @@ export const App: React.FC = () => {
           <div className="xp-desktop-icon-img" style={{ fontSize: '28px' }}>📝</div>
           <div className="xp-desktop-icon-text">Uputstvo</div>
         </div>
-        
+
         <div className="xp-desktop-icon" onClick={() => toggleWindow('terminal')}>
           <div className="xp-desktop-icon-img" style={{ fontSize: '28px' }}>💻</div>
           <div className="xp-desktop-icon-text">Git Terminal</div>
@@ -608,23 +608,23 @@ export const App: React.FC = () => {
       {/* Aktivni prozori */}
       {windows.map(win => {
         if (!win.isOpen) return null;
-        
+
         const isFocused = win.active;
-        const winStyles: React.CSSProperties = win.isMaximized 
+        const winStyles: React.CSSProperties = win.isMaximized
           ? {
-              top: 0,
-              left: 0,
-              width: '100vw',
-              height: 'calc(100vh - 40px)',
-              position: 'absolute'
-            }
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: 'calc(100vh - 40px)',
+            position: 'absolute'
+          }
           : {
-              top: win.y,
-              left: win.x,
-              width: win.w,
-              height: win.h,
-              position: 'absolute'
-            };
+            top: win.y,
+            left: win.x,
+            width: win.w,
+            height: win.h,
+            position: 'absolute'
+          };
 
         if (win.isMinimized) return null;
 
@@ -636,7 +636,7 @@ export const App: React.FC = () => {
             onClick={() => focusWindow(win.id)}
           >
             {/* Title Bar */}
-            <div 
+            <div
               className="xp-window-titlebar"
               onMouseDown={(e) => handleTitleBarMouseDown(win.id, e)}
             >
@@ -653,7 +653,7 @@ export const App: React.FC = () => {
 
             {/* Window Content */}
             <div className="xp-window-content">
-              
+
               {/* 1. Terminal Window Content */}
               {win.id === 'terminal' && (
                 <div className="xp-terminal" onClick={() => document.getElementById('term-input-field')?.focus()}>
@@ -695,12 +695,12 @@ export const App: React.FC = () => {
                     <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#666' }}>KATEGORIJA: {currentLevel.category}</span>
                     <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#245ddb' }}>NIVO {currentLevel.id} od 10</span>
                   </div>
-                  
+
                   <h2 style={{ fontSize: '18px', color: '#002e80', borderBottom: '2px solid #3b68c3', paddingBottom: '5px' }}>
                     {currentLevel.title}
                   </h2>
 
-                  <div 
+                  <div
                     style={{ fontSize: '13px', lineHeight: '1.6', margin: '15px 0' }}
                     dangerouslySetInnerHTML={{ __html: parseMarkdownToHtml(currentLevel.description) }}
                   />
@@ -713,14 +713,14 @@ export const App: React.FC = () => {
                   </div>
 
                   <div style={{ marginTop: 'auto', display: 'flex', gap: '10px', paddingTop: '10px', borderTop: '1px solid #d4d0c8' }}>
-                    <button 
+                    <button
                       className="xp-button"
                       disabled={currentLevelIdx === 0}
                       onClick={() => setCurrentLevelIdx(prev => prev - 1)}
                     >
                       Prethodni nivo
                     </button>
-                    <button 
+                    <button
                       className="xp-button xp-button-primary"
                       disabled={!(completedLevels.includes(currentLevel.id) || currentLevel.id <= Math.max(...completedLevels, 0))}
                       onClick={() => {
@@ -754,7 +754,7 @@ export const App: React.FC = () => {
                   <p style={{ marginTop: '10px' }}>
                     📚 <strong>Edukativni materijal:</strong><br />
                     Sav teorijski sadržaj, zadaci i metodologija učenja preuzeti su iz javnih predavanja i slajdova **Prof. dr Igora Dejanovića** sa Fakulteta tehničkih nauka u Novom Sadu (kurs Tehnički alati / Git).
-                    Sve zasluge za strukturu i kvalitet objašnjenja pripadaju profesoru Dejanoviću. Posetite izvorne materijale na: 
+                    Sve zasluge za strukturu i kvalitet objašnjenja pripadaju profesoru Dejanoviću. Posetite izvorne materijale na:
                     <a href="https://igordejanovic.net/courses/tech/git/" target="_blank" rel="noreferrer" style={{ color: '#245ddb', marginLeft: '5px', textDecoration: 'underline' }}>igordejanovic.net/courses/tech/git/</a>
                   </p>
                   <p style={{ marginTop: '10px' }}>
@@ -762,7 +762,7 @@ export const App: React.FC = () => {
                     Zahvaljujemo se i fenomenalnom projektu **Learn Git Branching** (learngitbranching.js.org) koji je poslužio kao glavna inspiracija za učenje Git-a putem interaktivnog grafičkog stabla na komandnoj liniji.
                   </p>
                   <p style={{ marginTop: '10px', fontSize: '11px', color: '#666', fontStyle: 'italic' }}>
-                    Platforma koristi isključivo srpski jezik (latinicu) i lokalno skladište (localStorage) za praćenje vašeg napretka.
+                    Projekat je kreiran od strane<a href="https://github.com/RileDev" target="_blank" rel="noreferrer" style={{ color: '#245ddb', marginLeft: '5px', textDecoration: 'underline' }}>github.com/RileDev</a> uz pomoc Antigravity alata.
                   </p>
                 </div>
               )}
@@ -779,8 +779,8 @@ export const App: React.FC = () => {
             {gitkoMsg}
           </div>
         )}
-        <div 
-          className="xp-gitko-char" 
+        <div
+          className="xp-gitko-char"
           onClick={() => {
             setGitkoMsg("Ja sam Gitko! Klikni na ikone na radnoj površini da otvoriš Git Graf ili Uputstvo.");
             if (soundEnabled) playTone(440, 0, 0.15, 'sine');
@@ -833,7 +833,7 @@ export const App: React.FC = () => {
 
       {/* Windows XP Taskbar */}
       <div className="xp-taskbar">
-        <button 
+        <button
           className="xp-start-btn"
           onClick={() => setIsStartOpen(!isStartOpen)}
         >
@@ -853,7 +853,7 @@ export const App: React.FC = () => {
                   if (win.isMinimized) {
                     focusWindow(win.id);
                   } else if (win.active) {
-                    minimizeWindow(win.id, { stopPropagation: () => {} } as any);
+                    minimizeWindow(win.id, { stopPropagation: () => { } } as any);
                   } else {
                     focusWindow(win.id);
                   }
@@ -869,8 +869,8 @@ export const App: React.FC = () => {
         {/* Systray */}
         <div className="xp-systray">
           <div className="xp-systray-icons">
-            <span 
-              style={{ cursor: 'pointer' }} 
+            <span
+              style={{ cursor: 'pointer' }}
               onClick={() => setSoundEnabled(!soundEnabled)}
               title={soundEnabled ? "Isključi retro zvukove" : "Uključi retro zvukove"}
             >
