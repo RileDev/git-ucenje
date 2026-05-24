@@ -101,7 +101,7 @@ body {
 .xp-window {
   position: absolute;
   background-color: var(--xp-window-bg);
-  border: 3px solid #0050e6;
+  border: 3px solid var(--xp-window-border, #0050e6);
   border-top: none;
   border-radius: 8px 8px 0 0;
   box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.3);
@@ -109,11 +109,12 @@ body {
   flex-direction: column;
   overflow: hidden;
   z-index: 20;
+  color: var(--xp-text-primary, #000000);
 }
 
 .xp-window.active {
   z-index: 30;
-  border: 3px solid #0055ff;
+  border: 3px solid var(--xp-window-border-active, #0055ff);
   border-top: none;
 }
 
@@ -222,7 +223,7 @@ body {
   left: 0;
   width: 100vw;
   height: 40px;
-  background: linear-gradient(to bottom, #245ddb 0%, #0e3092 9%, #245ddb 18%, #245ddb 92%, #0e3092 100%);
+  background: var(--xp-taskbar-bg, linear-gradient(to bottom, #245ddb 0%, #0e3092 9%, #245ddb 18%, #245ddb 92%, #0e3092 100%));
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -317,8 +318,8 @@ body {
 
 /* System Tray (Clock and volume) */
 .xp-systray {
-  background: linear-gradient(to bottom, #0f8bf2 0%, #0c68c2 100%);
-  border-left: 1px solid #094a91;
+  background: var(--xp-systray-bg, linear-gradient(to bottom, #0f8bf2 0%, #0c68c2 100%));
+  border-left: 1px solid var(--xp-window-border, #094a91);
   box-shadow: inset 1px 0 2px rgba(255, 255, 255, 0.4);
   height: 28px;
   display: flex;
@@ -345,7 +346,7 @@ body {
   width: 380px;
   height: 480px;
   background-color: #ffffff;
-  border: 2px solid #245ddb;
+  border: 2px solid var(--xp-window-border, #245ddb);
   border-bottom: none;
   border-top-left-radius: 8px;
   border-top-right-radius: 8px;
@@ -358,7 +359,7 @@ body {
 
 .xp-start-header {
   height: 55px;
-  background: linear-gradient(to bottom, #1d52d4 0%, #3a75f1 100%);
+  background: var(--xp-title-gradient, linear-gradient(to bottom, #1d52d4 0%, #3a75f1 100%));
   display: flex;
   align-items: center;
   gap: 12px;
@@ -400,7 +401,7 @@ body {
 
 .xp-start-right {
   width: 45%;
-  background-color: #d3e5fa;
+  background-color: var(--xp-start-right-bg, #d3e5fa);
   padding: 10px 8px;
   display: flex;
   flex-direction: column;
@@ -409,7 +410,7 @@ body {
 
 .xp-start-separator {
   height: 1px;
-  background: linear-gradient(to right, transparent, #b0c9ea, transparent);
+  background: linear-gradient(to right, transparent, var(--xp-window-border, #b0c9ea), transparent);
   margin: 5px 0;
 }
 
@@ -420,23 +421,23 @@ body {
   padding: 6px 10px;
   border-radius: 3px;
   cursor: pointer;
-  color: #333333;
+  color: var(--xp-text-primary, #333333);
   font-size: 11px;
   text-decoration: none;
 }
 
 .xp-start-left .xp-start-item:hover {
-  background-color: #316ac5;
+  background-color: var(--xp-blue-primary, #316ac5);
   color: #ffffff;
 }
 
 .xp-start-right .xp-start-item {
   font-weight: bold;
-  color: #002e80;
+  color: var(--xp-blue-dark, #002e80);
 }
 
 .xp-start-right .xp-start-item:hover {
-  background-color: #316ac5;
+  background-color: var(--xp-blue-primary, #316ac5);
   color: #ffffff;
 }
 
@@ -447,7 +448,7 @@ body {
 
 .xp-start-item-subtext {
   font-size: 9px;
-  color: #666666;
+  color: var(--xp-text-muted, #666666);
 }
 .xp-start-item:hover .xp-start-item-subtext {
   color: #e5efff;
@@ -455,13 +456,13 @@ body {
 
 .xp-start-footer {
   height: 48px;
-  background: linear-gradient(to bottom, #3a75f1 0%, #1d52d4 100%);
+  background: var(--xp-title-gradient, linear-gradient(to bottom, #3a75f1 0%, #1d52d4 100%));
   display: flex;
   align-items: center;
   justify-content: flex-end;
   padding: 0 15px;
   gap: 12px;
-  border-top: 1px solid #7ea7fc;
+  border-top: 1px solid var(--xp-window-border, #7ea7fc);
 }
 
 .xp-footer-btn {
@@ -783,4 +784,37 @@ body {
   height: 100%;
   pointer-events: none;
   z-index: 999;
+}
+
+/* Stilovi za štampanje sertifikata */
+@media print {
+  body {
+    background: #fff !important;
+    overflow: visible !important;
+  }
+  .xp-desktop, .xp-taskbar, .xp-window:not(#certificate), .no-print, .xp-gitko-container {
+    display: none !important;
+  }
+  #certificate {
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+  .xp-window-titlebar, .xp-window-controls {
+    display: none !important;
+  }
+  .xp-window-content {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+  }
+  #printable-certificate {
+    box-shadow: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    page-break-inside: avoid;
+  }
 }

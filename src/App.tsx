@@ -117,6 +117,88 @@ const parseMarkdownToHtml = (markdown: string): string => {
   return html;
 };
 
+const bgStyles: Record<string, React.CSSProperties & Record<string, string>> = {
+  bliss: {
+    backgroundImage: "url('/bliss.png')",
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+    "--xp-blue-dark": "#002e80",
+    "--xp-blue-primary": "#245ddb",
+    "--xp-blue-light": "#5b87e2",
+    "--xp-blue-gradient": "linear-gradient(to bottom, #76a1f8 0%, #3d68c3 100%)",
+    "--xp-title-gradient": "linear-gradient(to right, #0058e6 0%, #3a8df5 50%, #0058e6 100%)",
+    "--xp-start-gradient": "linear-gradient(to bottom, #3c9d3c 0%, #246a24 100%)",
+    "--xp-start-hover": "linear-gradient(to bottom, #4cb84c 0%, #2f852f 100%)",
+    "--xp-window-bg": "#ece9d8",
+    "--xp-window-border": "#0050e6",
+    "--xp-window-border-active": "#0055ff",
+    "--xp-taskbar-bg": "linear-gradient(to bottom, #245ddb 0%, #0e3092 9%, #245ddb 18%, #245ddb 92%, #0e3092 100%)",
+    "--xp-systray-bg": "linear-gradient(to bottom, #0f8bf2 0%, #0c68c2 100%)",
+    "--xp-start-right-bg": "#d3e5fa",
+    "--xp-text-primary": "#333333",
+    "--xp-text-muted": "#666666",
+  },
+  royale: {
+    backgroundImage: "url('https://images.unsplash.com/photo-1518837695005-2083093ee35b?q=80&w=1600')",
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+    "--xp-blue-dark": "#002060",
+    "--xp-blue-primary": "#3b68c3",
+    "--xp-blue-light": "#7da9fc",
+    "--xp-blue-gradient": "linear-gradient(to bottom, #7da9fc 0%, #3b68c3 100%)",
+    "--xp-title-gradient": "linear-gradient(to right, #3b68c3 0%, #7da9fc 50%, #3b68c3 100%)",
+    "--xp-start-gradient": "linear-gradient(to bottom, #15ad15 0%, #086308 100%)",
+    "--xp-start-hover": "linear-gradient(to bottom, #20cc20 0%, #0c820c 100%)",
+    "--xp-window-bg": "#f0f3fd",
+    "--xp-window-border": "#3b68c3",
+    "--xp-window-border-active": "#7da9fc",
+    "--xp-taskbar-bg": "linear-gradient(to bottom, #3b68c3 0%, #204ba3 9%, #3b68c3 18%, #3b68c3 92%, #204ba3 100%)",
+    "--xp-systray-bg": "linear-gradient(to bottom, #508cf3 0%, #2859b8 100%)",
+    "--xp-start-right-bg": "#e6effb",
+    "--xp-text-primary": "#203a70",
+    "--xp-text-muted": "#506590",
+  },
+  zune: {
+    backgroundImage: "url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1600')",
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+    "--xp-blue-dark": "#1a1a1a",
+    "--xp-blue-primary": "#ff6600",
+    "--xp-blue-light": "#4e4e4e",
+    "--xp-blue-gradient": "linear-gradient(to bottom, #4e4e4e 0%, #1a1a1a 100%)",
+    "--xp-title-gradient": "linear-gradient(to right, #2b2b2b 0%, #3a3a3a 50%, #2b2b2b 100%)",
+    "--xp-start-gradient": "linear-gradient(to bottom, #ff6600 0%, #cc5200 100%)",
+    "--xp-start-hover": "linear-gradient(to bottom, #ff8533 0%, #e65c00 100%)",
+    "--xp-window-bg": "#ece9d8",
+    "--xp-window-border": "#4e4e4e",
+    "--xp-window-border-active": "#ff6600",
+    "--xp-taskbar-bg": "linear-gradient(to bottom, #2b2b2b 0%, #1a1a1a 9%, #2b2b2b 18%, #2b2b2b 92%, #1a1a1a 100%)",
+    "--xp-systray-bg": "linear-gradient(to bottom, #444444 0%, #2b2b2b 100%)",
+    "--xp-start-right-bg": "#dfdad3",
+    "--xp-text-primary": "#333333",
+    "--xp-text-muted": "#666666",
+  },
+  classic: {
+    backgroundColor: "#3b6ea5",
+    backgroundImage: "none",
+    "--xp-blue-dark": "#000080",
+    "--xp-blue-primary": "#808080",
+    "--xp-blue-light": "#d4d0c8",
+    "--xp-blue-gradient": "none",
+    "--xp-title-gradient": "linear-gradient(to right, #000080 0%, #1084d0 100%)",
+    "--xp-start-gradient": "linear-gradient(to bottom, #d4d0c8 0%, #808080 100%)",
+    "--xp-start-hover": "linear-gradient(to bottom, #ffffff 0%, #b0b0b0 100%)",
+    "--xp-window-bg": "#d4d0c8",
+    "--xp-window-border": "#808080",
+    "--xp-window-border-active": "#000080",
+    "--xp-taskbar-bg": "#d4d0c8",
+    "--xp-systray-bg": "#d4d0c8",
+    "--xp-start-right-bg": "#d4d0c8",
+    "--xp-text-primary": "#000000",
+    "--xp-text-muted": "#808080",
+  }
+};
+
 export const App: React.FC = () => {
   // Inicijalni nivo i dovršeni nivoi sačuvani u localStorage
   const [currentLevelIdx, setCurrentLevelIdx] = useState<number>(() => {
@@ -190,14 +272,76 @@ export const App: React.FC = () => {
       isMinimized: false,
       isMaximized: false,
       active: false
+    },
+    {
+      id: 'controlPanel',
+      title: 'Control Panel (Kontrolna Tabla)',
+      icon: '🎛️',
+      x: 100,
+      y: 80,
+      w: 460,
+      h: 400,
+      isOpen: false,
+      isMinimized: false,
+      isMaximized: false,
+      active: false
+    },
+    {
+      id: 'trivia',
+      title: 'Doge Trivia Kviz',
+      icon: '🧠',
+      x: 120,
+      y: 100,
+      w: 460,
+      h: 440,
+      isOpen: false,
+      isMinimized: false,
+      isMaximized: false,
+      active: false
+    },
+    {
+      id: 'certificate',
+      title: 'Luna Git Sertifikat',
+      icon: '📜',
+      x: 140,
+      y: 50,
+      w: 680,
+      h: 520,
+      isOpen: false,
+      isMinimized: false,
+      isMaximized: false,
+      active: false
     }
   ]);
+
+  // Podešavanja izgleda i asistenta
+  const [bgTheme, setBgTheme] = useState<'bliss' | 'royale' | 'zune' | 'classic'>(() => {
+    return (localStorage.getItem('luna_git_bg') as any) || 'bliss';
+  });
+
+  const [assistantChar, setAssistantChar] = useState<'doge' | 'snake' | 'bonzi'>(() => {
+    return (localStorage.getItem('luna_git_assistant') as any) || 'doge';
+  });
+
+  const [studentName, setStudentName] = useState(() => {
+    return localStorage.getItem('luna_git_student_name') || '';
+  });
+
+  // Trivia Kviz stanja
+  const [triviaIndex, setTriviaIndex] = useState(0);
+  const [selectedOption, setSelectedOption] = useState<number | null>(null);
+  const [showTriviaFeedback, setShowTriviaFeedback] = useState(false);
+  const [triviaScore, setTriviaScore] = useState(0);
+  const [triviaFinished, setTriviaFinished] = useState(false);
 
   // Start meni, BSOD, zvučni signali, Solitaire slavlje
   const [isStartOpen, setIsStartOpen] = useState(false);
   const [showBSOD, setShowBSOD] = useState(false);
   const [showSolitaire, setShowSolitaire] = useState(false);
-  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    const saved = localStorage.getItem('luna_git_sound');
+    return saved !== 'false';
+  });
   const [timeStr, setTimeStr] = useState('');
 
   // Gitko pomoćnik
@@ -232,6 +376,23 @@ export const App: React.FC = () => {
       }, 800);
     }
   }, []);
+
+  // Čuvanje podešavanja u localStorage
+  useEffect(() => {
+    localStorage.setItem('luna_git_bg', bgTheme);
+  }, [bgTheme]);
+
+  useEffect(() => {
+    localStorage.setItem('luna_git_assistant', assistantChar);
+  }, [assistantChar]);
+
+  useEffect(() => {
+    localStorage.setItem('luna_git_student_name', studentName);
+  }, [studentName]);
+
+  useEffect(() => {
+    localStorage.setItem('luna_git_sound', soundEnabled ? 'true' : 'false');
+  }, [soundEnabled]);
 
   // Postavljanje početnog stanja kada se nivo promeni
   useEffect(() => {
@@ -371,18 +532,31 @@ export const App: React.FC = () => {
       setTerminalHistory(currentHist);
 
       // Prati uspešno izvršenu komandu ako počinje sa "git"
+      let updatedCommandsRun = [...levelCommandsRun];
+      const typedCleaned = cmd.toLowerCase().trim().replace(/\s+/g, ' ');
+
+      // Proveri da li se uneta komanda poklapa sa nekim od očekivanih za trenutni nivo
+      currentLevel.expectedCommands.forEach(expectedCmd => {
+        const expectedCleaned = expectedCmd.toLowerCase().trim().replace(/\s+/g, ' ');
+        if (typedCleaned.startsWith(expectedCleaned) || (expectedCleaned === 'git checkout' && typedCleaned.startsWith('git switch'))) {
+          if (!updatedCommandsRun.includes(expectedCleaned)) {
+            updatedCommandsRun.push(expectedCleaned);
+          }
+        }
+      });
+
+      // Takođe zadrži opštu podršku za bilokoju git komandu da se upiše u istoriju radi kompatibilnosti
       const parts = cmd.toLowerCase().trim().split(/\s+/);
       const gitCmd = parts[0];
       const subCmd = parts[1];
-      
-      let updatedCommandsRun = levelCommandsRun;
       if (gitCmd === 'git' && subCmd) {
-        const fullCmd = `git ${subCmd}`;
-        if (!levelCommandsRun.includes(fullCmd)) {
-          updatedCommandsRun = [...levelCommandsRun, fullCmd];
-          setLevelCommandsRun(updatedCommandsRun);
+        const generalCmd = `git ${subCmd}`;
+        if (!updatedCommandsRun.includes(generalCmd)) {
+          updatedCommandsRun.push(generalCmd);
         }
       }
+
+      setLevelCommandsRun(updatedCommandsRun);
 
       // Provera validacije nivoa
       const solved = currentLevel.validate(result.newState);
@@ -583,7 +757,7 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="xp-desktop">
+    <div className="xp-desktop" style={bgStyles[bgTheme]}>
       {/* BSOD Plavi ekran smrti (Easter Egg) */}
       {showBSOD && (
         <div className="xp-bsod">
@@ -626,7 +800,7 @@ export const App: React.FC = () => {
           }}>
             <h2 style={{ color: '#002e80', fontWeight: 'bold', fontSize: '22px', marginBottom: '15px' }}>🎉 Svaka čast, genije! 🎉</h2>
             <p style={{ fontSize: '13px', lineHeight: '1.6', marginBottom: '20px', color: '#333' }}>
-              Završio si svih 10 nivoa na platformi <strong>Luna Git</strong> i uspešno savladao teoriju prof. dr Igora Dejanovića na srpskom jeziku! Sada si spreman za rad na realnim projektima!
+              Završio si svih {levels.length} nivoa na platformi <strong>Luna Git</strong> i uspešno savladao teoriju prof. dr Igora Dejanovića na srpskom jeziku! Sada si spreman za rad na realnim projektima!
             </p>
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
               <button className="xp-button xp-button-primary" onClick={() => setShowSolitaire(false)}>Zatvori kaskadu</button>
@@ -651,6 +825,21 @@ export const App: React.FC = () => {
         <div className="xp-desktop-icon" onClick={() => toggleWindow('graph')}>
           <div className="xp-desktop-icon-img" style={{ fontSize: '28px' }}>📊</div>
           <div className="xp-desktop-icon-text">Git Graf</div>
+        </div>
+
+        <div className="xp-desktop-icon" onClick={() => toggleWindow('controlPanel')}>
+          <div className="xp-desktop-icon-img" style={{ fontSize: '28px' }}>🎛️</div>
+          <div className="xp-desktop-icon-text">Control Panel</div>
+        </div>
+
+        <div className="xp-desktop-icon" onClick={() => toggleWindow('trivia')}>
+          <div className="xp-desktop-icon-img" style={{ fontSize: '28px' }}>🧠</div>
+          <div className="xp-desktop-icon-text">Doge Kviz</div>
+        </div>
+
+        <div className="xp-desktop-icon" onClick={() => toggleWindow('certificate')}>
+          <div className="xp-desktop-icon-img" style={{ fontSize: '28px' }}>📜</div>
+          <div className="xp-desktop-icon-text">Sertifikat</div>
         </div>
 
         <div className="xp-desktop-icon" onClick={() => toggleWindow('credits')}>
@@ -747,7 +936,7 @@ export const App: React.FC = () => {
                 <div className="xp-level-panel">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                     <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#666' }}>KATEGORIJA: {currentLevel.category}</span>
-                    <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#245ddb' }}>NIVO {currentLevel.id} od 10</span>
+                    <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#245ddb' }}>NIVO {currentLevel.id} od {levels.length}</span>
                   </div>
 
                   <h2 style={{ fontSize: '18px', color: '#002e80', borderBottom: '2px solid #3b68c3', paddingBottom: '5px' }}>
@@ -821,6 +1010,480 @@ export const App: React.FC = () => {
                 </div>
               )}
 
+              {/* 5. Control Panel Window Content */}
+              {win.id === 'controlPanel' && (
+                <div style={{ padding: '15px', height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '15px', boxSizing: 'border-box' }}>
+                  <h3 style={{ color: '#002e80', borderBottom: '2px solid #b0c9ea', paddingBottom: '4px', margin: '0 0 10px 0' }}>
+                    🎛️ Podešavanja Ekosistema
+                  </h3>
+                  
+                  <div>
+                    <h4 style={{ fontWeight: 'bold', marginBottom: '8px', color: '#333', fontSize: '12px' }}>🌄 Izaberi temu i izgled ekosistema (Themes)</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+                      {[
+                        { id: 'bliss', name: 'Bliss (XP Klasik)' },
+                        { id: 'royale', name: 'Royale Blue (Medijski centar)' },
+                        { id: 'zune', name: 'Zune (Tamno narandžasto)' },
+                        { id: 'classic', name: 'Classic Windows 2000' }
+                      ].map(t => (
+                        <button
+                          key={t.id}
+                          className={`xp-button ${bgTheme === t.id ? 'xp-button-primary' : ''}`}
+                          onClick={() => {
+                            setBgTheme(t.id as any);
+                            if (soundEnabled) playTone(500, 0, 0.1, 'sine');
+                          }}
+                          style={{ padding: '8px', textAlign: 'left', fontSize: '11px' }}
+                        >
+                          {bgTheme === t.id ? '🟢' : '⚪'} {t.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 style={{ fontWeight: 'bold', marginBottom: '8px', color: '#333', fontSize: '12px' }}>🐶 Izaberi retro asistenta</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                      {[
+                        { id: 'doge', name: 'Gitko Doge 🐶' },
+                        { id: 'snake', name: 'Solid Snake 📦' },
+                        { id: 'bonzi', name: 'BonziBuddy 🍇' }
+                      ].map(a => (
+                        <button
+                          key={a.id}
+                          className={`xp-button ${assistantChar === a.id ? 'xp-button-primary' : ''}`}
+                          onClick={() => {
+                            setAssistantChar(a.id as any);
+                            if (soundEnabled) playTone(600, 0, 0.1, 'sine');
+                            const welcomeMsgs = {
+                              doge: 'Vau! Gitko Doge je ponovo tu! Mnogo git, vrlo grana!',
+                              snake: 'Snake ovde. Spreman za akciju na terenu. Pazi se!',
+                              bonzi: 'Zdravo! Ja sam tvoj najbolji ljubičasti drugar BonziBuddy!'
+                            };
+                            setGitkoMsg(welcomeMsgs[a.id as keyof typeof welcomeMsgs]);
+                          }}
+                          style={{ padding: '8px', fontSize: '11px' }}
+                        >
+                          {a.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 style={{ fontWeight: 'bold', marginBottom: '8px', color: '#333', fontSize: '12px' }}>🔊 Retro zvučni efekti</h4>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button
+                        className={`xp-button ${soundEnabled ? 'xp-button-primary' : ''}`}
+                        onClick={() => {
+                          setSoundEnabled(!soundEnabled);
+                          if (!soundEnabled) {
+                            setTimeout(() => playTone(600, 0, 0.15, 'sine'), 100);
+                          }
+                        }}
+                        style={{ flex: 1, padding: '8px', fontSize: '11px' }}
+                      >
+                        {soundEnabled ? '🔊 Uključeni retro zvukovi' : '🔇 Zvukovi su isključeni'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 6. Trivia Quiz Window Content */}
+              {win.id === 'trivia' && (() => {
+                const questions = [
+                  {
+                    q: "Koja komanda inicijalizuje novi Git repozitorijum?",
+                    options: ["git start", "git init", "git create", "git new"],
+                    answer: 1,
+                    exp: "Komanda 'git init' stvara prazan .git direktorijum i započinje praćenje istorije projekta."
+                  },
+                  {
+                    q: "Šta tačno radi 'git add <fajl>'?",
+                    options: [
+                      "Snima promene u trajnu istoriju.",
+                      "Briše neželjene fajlove sa diska.",
+                      "Prebacuje promene u pripremnu zonu (staging area).",
+                      "Šalje kod na GitHub."
+                    ],
+                    answer: 2,
+                    exp: "Pripremna zona (index ili staging area) služi za biranje izmena koje će ući u sledeći commit."
+                  },
+                  {
+                    q: "Koja je glavna razlika između git merge i git rebase?",
+                    options: [
+                      "Merge pravi novi merge commit i čuva originalnu istoriju, dok rebase prepisuje istoriju praveći je linearnom.",
+                      "Merge briše fajlove, a rebase ih čuva.",
+                      "Rebase radi samo na serveru, a merge samo lokalno.",
+                      "Nema nikakve razlike."
+                    ],
+                    answer: 0,
+                    exp: "Merge pravi dodatni commit koji spaja dve grane. Rebase pomera bazu grane na vrh druge, prepisujući istoriju."
+                  },
+                  {
+                    q: "Čemu služi komanda git stash?",
+                    options: [
+                      "Za trajno brisanje grana.",
+                      "Za privremeno sklanjanje lokalnih izmena kako bismo dobili čisto radno stablo.",
+                      "Za preuzimanje koda sa servera.",
+                      "Za preimenovanje fajlova."
+                    ],
+                    answer: 1,
+                    exp: "Stash sklanja modifikovane fajlove na stek i vraća čisto stablo, što omogućava brzu promenu grana."
+                  },
+                  {
+                    q: "Kako možemo bezbedno izmeniti poruku poslednjeg commit-a?",
+                    options: [
+                      "git commit --change",
+                      "git commit --amend -m \"Nova poruka\"",
+                      "git commit --reset",
+                      "git rewrite"
+                    ],
+                    answer: 1,
+                    exp: "--amend prepravlja poslednji commit, dodajući mu trenutne pripremljene izmene i novu poruku."
+                  },
+                  {
+                    q: "Šta se dešava kada uradite git fetch?",
+                    options: [
+                      "Preuzimaju se novi commit-i sa servera, ali se ne spajaju sa vašim lokalnim radom.",
+                      "Vaš kod se automatski šalje na server.",
+                      "Briše se ceo repozitorijum.",
+                      "Spajaju se grane."
+                    ],
+                    answer: 0,
+                    exp: "Fetch preuzima metapodatke i commit-e sa servera u origin/master, ali ih ne spaja u vaš lokalni master."
+                  },
+                  {
+                    q: "Koja komanda se koristi za kreiranje i prelazak na novu granu u jednom koraku?",
+                    options: [
+                      "git checkout -b <ime>",
+                      "git branch -c <ime>",
+                      "git switch -new <ime>",
+                      "git new-branch <ime>"
+                    ],
+                    answer: 0,
+                    exp: "git checkout -b kreira novu granu i odmah preusmerava vaš HEAD pokazivač na nju."
+                  },
+                  {
+                    q: "Čemu služi dnevnik git reflog?",
+                    options: [
+                      "Prikazuje listu fajlova u pripremnoj zoni.",
+                      "Beleži svako kretanje HEAD pokazivača, omogućavajući pronalaženje naizgled obrisanih commit-ova.",
+                      "Koristi se za komunikaciju sa kolegama na projektu.",
+                      "Prikazuje statistiku linija koda."
+                    ],
+                    answer: 1,
+                    exp: "Reflog beleži apsolutno svaku akciju (commit, checkout, reset). Ako izgubite commit, tamo ćete naći heš."
+                  },
+                  {
+                    q: "Šta radi git bisect?",
+                    options: [
+                      "Spaja dve grane odjednom.",
+                      "Koristi binarnu pretragu kroz istoriju commit-ova da brzo locira commit koji je uveo bag.",
+                      "Klonira dva repozitorijuma paralelno.",
+                      "Briše pola commit-ova iz istorije."
+                    ],
+                    answer: 1,
+                    exp: "Bisect sprovodi binarnu pretragu između dobrog i lošeg commit-a kako bi se locirao krivac za bag."
+                  }
+                ];
+
+                const currentQ = questions[triviaIndex];
+
+                const handleAnswer = (idx: number) => {
+                  setSelectedOption(idx);
+                  setShowTriviaFeedback(true);
+                  const isCorrect = idx === currentQ.answer;
+
+                  if (isCorrect) {
+                    setTriviaScore(s => s + 1);
+                    if (soundEnabled) playTone(783.99, 0, 0.3, 'sine', 0.12);
+                    
+                    const corMsgs = {
+                      doge: "Vau! Mnogo tačno, vrlo pametno, vau! Klasa Git stručnjaka!",
+                      snake: "Izvanredan rad na terenu! Tvoj Git IQ je na nivou elitnih specijalaca.",
+                      bonzi: "Apsolutno fantastično! Tvoj odgovor je magično tačan! 🍌"
+                    };
+                    setGitkoMsg(corMsgs[assistantChar]);
+                  } else {
+                    if (soundEnabled) playTone(150, 0, 0.4, 'sawtooth', 0.15);
+                    
+                    const incorMsgs = {
+                      doge: "O ne! Vrlo netačno, mnogo greška, tužni doge. Pokušaj opet!",
+                      snake: "Snake? Snake?! SNAAAAAKE! Nije tačno! Koncentriši se, neprijatelj te posmatra!",
+                      bonzi: "Ups! Moje banane kažu da to nije tačan odgovor! Više sreće u sledećem koraku."
+                    };
+                    setGitkoMsg(incorMsgs[assistantChar]);
+                  }
+                };
+
+                const handleNextTrivia = () => {
+                  setSelectedOption(null);
+                  setShowTriviaFeedback(false);
+                  if (triviaIndex < questions.length - 1) {
+                    setTriviaIndex(prev => prev + 1);
+                  } else {
+                    setTriviaFinished(true);
+                    if (soundEnabled) playXpSuccess();
+                  }
+                };
+
+                const resetTrivia = () => {
+                  setTriviaIndex(0);
+                  setSelectedOption(null);
+                  setShowTriviaFeedback(false);
+                  setTriviaScore(0);
+                  setTriviaFinished(false);
+                };
+
+                if (triviaFinished) {
+                  return (
+                    <div style={{ padding: '20px', textAlign: 'center', height: '100%', overflowY: 'auto' }}>
+                      <div style={{ fontSize: '48px', marginBottom: '15px' }}>🏆</div>
+                      <h3 style={{ color: '#002e80', marginBottom: '10px' }}>Kviz završen!</h3>
+                      <p style={{ fontSize: '15px', marginBottom: '20px' }}>
+                        Tvoj rezultat je <strong>{triviaScore}</strong> od <strong>{questions.length}</strong> poena!
+                      </p>
+                      <div className="xp-level-box" style={{ marginBottom: '20px', display: 'inline-block', maxWidth: '350px' }}>
+                        {triviaScore === questions.length ? (
+                          <span>🚀 Perfektan rezultat! Pravi si Git General.</span>
+                        ) : triviaScore >= 6 ? (
+                          <span>👍 Odlično znanje! Skoro sve ti je kristalno jasno.</span>
+                        ) : (
+                          <span>⚠️ Nije loše, ali pročitaj uputstva još jednom i pokušaj ponovo.</span>
+                        )}
+                      </div>
+                      <div>
+                        <button className="xp-button xp-button-primary" onClick={resetTrivia}>Igraj ponovo</button>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div style={{ padding: '15px', display: 'flex', flexDirection: 'column', height: '100%', overflowY: 'auto', boxSizing: 'border-box' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '11px', color: '#666', borderBottom: '1px solid #d4d0c8', paddingBottom: '5px' }}>
+                      <span>Pitanje {triviaIndex + 1} od {questions.length}</span>
+                      <span>Rezultat: {triviaScore} tačnih</span>
+                    </div>
+
+                    <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#002e80', marginBottom: '15px', minHeight: '40px' }}>
+                      {currentQ.q}
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '15px' }}>
+                      {currentQ.options.map((opt, idx) => {
+                        return (
+                          <button
+                            key={idx}
+                            className="xp-button"
+                            disabled={selectedOption !== null}
+                            onClick={() => handleAnswer(idx)}
+                            style={{
+                              padding: '10px',
+                              textAlign: 'left',
+                              fontSize: '12px',
+                              backgroundColor: selectedOption !== null && idx === currentQ.answer ? '#10b981' : selectedOption === idx ? '#f87171' : '',
+                              color: selectedOption !== null && (idx === currentQ.answer || idx === selectedOption) ? '#fff' : '#000',
+                              transition: 'all 0.1s ease'
+                            }}
+                          >
+                            <strong>{String.fromCharCode(65 + idx)})</strong> {opt}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {showTriviaFeedback && (
+                      <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div className="xp-level-box" style={{ fontSize: '11px', borderLeftColor: selectedOption === currentQ.answer ? '#10b981' : '#f87171' }}>
+                          <strong>💡 Objašnjenje:</strong> {currentQ.exp}
+                        </div>
+                        <button className="xp-button xp-button-primary" onClick={handleNextTrivia} style={{ alignSelf: 'flex-end' }}>
+                          {triviaIndex < questions.length - 1 ? 'Sledeće pitanje ➡️' : 'Završi kviz 🏁'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* 7. Certificate Window Content */}
+              {win.id === 'certificate' && (() => {
+                const isUnlocked = completedLevels.length >= levels.length || completedLevels.includes(levels[levels.length - 1].id);
+
+                if (!isUnlocked) {
+                  return (
+                    <div style={{ padding: '30px', textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                      <div style={{ fontSize: '54px', marginBottom: '20px' }}>🔒</div>
+                      <h3 style={{ color: '#002e80', marginBottom: '10px' }}>Luna Git Sertifikat je Zaključan!</h3>
+                      <p style={{ fontSize: '13px', color: '#666', maxWidth: '400px', marginBottom: '20px', lineHeight: '1.6' }}>
+                        Da biste preuzeli ovaj ekskluzivni dokaz o Git pismenosti, morate završiti svih <strong>{levels.length} nivoa</strong>.
+                        Vaš trenutni napredak iznosi:
+                      </p>
+                      <div style={{ width: '100%', maxWidth: '350px', height: '22px', backgroundColor: '#e0dfdb', border: '1px solid #999', padding: '2px', borderRadius: '3px', marginBottom: '10px' }}>
+                        <div style={{
+                          width: `${(completedLevels.length / levels.length) * 100}%`,
+                          height: '100%',
+                          background: 'linear-gradient(to bottom, #76c76c 0%, #3ca03c 100%)',
+                          transition: 'width 0.5s ease-in-out'
+                        }} />
+                      </div>
+                      <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#333' }}>
+                        Završeno {completedLevels.length} od {levels.length} nivoa ({Math.round((completedLevels.length / levels.length) * 100)}%)
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div style={{ padding: '15px', display: 'flex', flexDirection: 'column', height: '100%', overflowY: 'auto', boxSizing: 'border-box' }}>
+                    <div style={{ display: 'flex', gap: '15px', marginBottom: '15px', alignItems: 'center', backgroundColor: '#f0f3fd', border: '1px solid #d3e2f9', padding: '10px', borderRadius: '4px' }} className="no-print">
+                      <div style={{ flex: 1 }}>
+                        <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#002e80', display: 'block', marginBottom: '4px' }}>
+                          Unesi svoje puno ime za sertifikat:
+                        </label>
+                        <input
+                          type="text"
+                          className="xp-terminal-input"
+                          value={studentName}
+                          onChange={(e) => setStudentName(e.target.value)}
+                          placeholder="Ime i prezime"
+                          style={{
+                            backgroundColor: '#fff',
+                            color: '#000',
+                            border: '1px solid #99aab5',
+                            padding: '6px',
+                            width: '100%',
+                            borderRadius: '3px',
+                            fontFamily: 'sans-serif'
+                          }}
+                        />
+                      </div>
+                      <button
+                        className="xp-button xp-button-primary"
+                        onClick={() => window.print()}
+                        style={{ height: '34px', alignSelf: 'flex-end', display: 'flex', alignItems: 'center', gap: '5px' }}
+                      >
+                        🖨️ Odštampaj / Sačuvaj PDF
+                      </button>
+                    </div>
+
+                    <div
+                      id="printable-certificate"
+                      style={{
+                        border: '12px double #d4af37',
+                        padding: '30px',
+                        backgroundColor: '#faf8f0',
+                        position: 'relative',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        textAlign: 'center',
+                        fontFamily: "'Georgia', serif",
+                        boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
+                        minHeight: '400px',
+                        color: '#333'
+                      }}
+                    >
+                      <div style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        fontSize: '180px',
+                        opacity: 0.04,
+                        pointerEvents: 'none',
+                        userSelect: 'none',
+                        zIndex: 0
+                      }}>
+                        GIT
+                      </div>
+
+                      <div style={{ fontSize: '11px', fontWeight: 'bold', letterSpacing: '2px', color: '#a08435', marginBottom: '15px', zIndex: 1 }}>
+                        LUNA GIT EDUKATIVNA RETRO PLATFORMA
+                      </div>
+
+                      <h2 style={{ fontSize: '24px', color: '#002e80', margin: '0 0 10px 0', fontWeight: 'bold', fontFamily: "'Georgia', serif", zIndex: 1 }}>
+                        SERTIFIKAT O STRUČNOSTI
+                      </h2>
+
+                      <div style={{ width: '80px', height: '2px', backgroundColor: '#d4af37', marginBottom: '20px', zIndex: 1 }} />
+
+                      <p style={{ fontStyle: 'italic', fontSize: '13px', color: '#666', marginBottom: '10px', zIndex: 1 }}>
+                        Ovim se svečano i sa ponosom potvrđuje da je
+                      </p>
+
+                      <h1 style={{ fontSize: '28px', color: '#111', fontWeight: 'bold', textDecoration: 'underline', margin: '10px 0 20px 0', minHeight: '38px', fontFamily: "'Georgia', serif", zIndex: 1 }}>
+                        {studentName || 'Mladi Git Stručnjak'}
+                      </h1>
+
+                      <p style={{ fontSize: '13px', lineHeight: '1.7', color: '#444', maxWidth: '500px', marginBottom: '30px', zIndex: 1 }}>
+                        uspešno savladao/la celokupni edukativni program učenja Git-a koji se sastoji od <strong>{levels.length} naprednih interaktivnih lekcija</strong>,
+                        i time stekao/la praktično znanje o kontroli verzija, grananju, spajanju koda, rešavanju konflikata, privremenom sklanjanju rada, i naprednoj prepravci istorije.
+                      </p>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginTop: 'auto', padding: '0 20px', zIndex: 1, gap: '20px', alignItems: 'flex-end' }}>
+                        <div style={{ textAlign: 'center', flex: 1 }}>
+                          <div style={{ fontStyle: 'italic', fontSize: '12px', color: '#666', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            Prof. dr Igor Dejanović
+                          </div>
+                          <div style={{ borderTop: '1px solid #999', paddingTop: '5px', fontSize: '11px', fontWeight: 'bold', color: '#555' }}>
+                            Autor predavanja (FTN)
+                          </div>
+                        </div>
+
+                        <div style={{ position: 'relative', width: '90px', height: '90px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                          <div style={{
+                            width: '80px',
+                            height: '80px',
+                            borderRadius: '50%',
+                            border: '4px dashed #d4af37',
+                            backgroundColor: '#fff9e6',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: 'inset 0 0 5px rgba(0,0,0,0.1)'
+                          }}>
+                            <img
+                              src={
+                                assistantChar === 'doge'
+                                  ? "https://freepngimg.com/download/meme/97579-meme-doge-free-png-hq.png"
+                                  : assistantChar === 'snake'
+                                  ? "https://www.nicepng.com/png/full/155-1557662_solid-snake-transparent-background-mgs-2-solid-snake.png"
+                                  : "https://static.wikia.nocookie.net/supermario231/images/3/3f/BonziBUDDY.png/revision/latest?cb=20190430062642"
+                              }
+                              alt="Pečat"
+                              style={{ width: '45px', height: '45px', objectFit: 'contain', transform: 'rotate(-10deg)' }}
+                            />
+                          </div>
+                          <div style={{
+                            position: 'absolute',
+                            fontSize: '8px',
+                            fontWeight: 'bold',
+                            color: '#d4af37',
+                            textTransform: 'uppercase',
+                            bottom: 2
+                          }}>
+                            LUNA ODOBRENO
+                          </div>
+                        </div>
+
+                        <div style={{ textAlign: 'center', flex: 1 }}>
+                          <div style={{ fontStyle: 'italic', fontSize: '12px', color: '#666', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {assistantChar === 'doge' ? 'Gitko Doge' : assistantChar === 'snake' ? 'Solid Snake' : 'BonziBuddy'}
+                          </div>
+                          <div style={{ borderTop: '1px solid #999', paddingTop: '5px', fontSize: '11px', fontWeight: 'bold', color: '#555' }}>
+                            Svedok obuke
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
             </div>
           </div>
         );
@@ -836,13 +1499,24 @@ export const App: React.FC = () => {
         <div
           className="xp-gitko-char"
           onClick={() => {
-            setGitkoMsg("Ja sam Gitko Doge! Mnogo git, vrlo grana, vau! Klikni na ikone na radnoj površini da otvoriš Git Graf ili Uputstvo.");
+            const msgs = {
+              doge: "Ja sam Gitko Doge! Mnogo git, vrlo grana, vau! Klikni na ikone na radnoj površini da otvoriš Git Graf ili Uputstvo.",
+              snake: "Snake ovde. Pukovniče, ušao sam u Git repozitorijum. Pazi na konflikte, over.",
+              bonzi: "Zdravo! Ja sam tvoj najbolji ljubičasti drugar BonziBuddy! Hoćeš li da ti ispričam vic o programerima? 🍇"
+            };
+            setGitkoMsg(msgs[assistantChar]);
             if (soundEnabled) playTone(440, 0, 0.15, 'sine');
           }}
         >
           <img 
-            src="https://freepngimg.com/download/meme/97579-meme-doge-free-png-hq.png" 
-            alt="Gitko Doge" 
+            src={
+              assistantChar === 'doge'
+                ? "https://freepngimg.com/download/meme/97579-meme-doge-free-png-hq.png"
+                : assistantChar === 'snake'
+                ? "https://www.nicepng.com/png/full/155-1557662_solid-snake-transparent-background-mgs-2-solid-snake.png"
+                : "https://static.wikia.nocookie.net/supermario231/images/3/3f/BonziBUDDY.png/revision/latest?cb=20190430062642"
+            } 
+            alt={assistantChar === 'doge' ? 'Gitko Doge' : assistantChar === 'snake' ? 'Solid Snake' : 'BonziBuddy'} 
             style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
           />
         </div>
@@ -961,14 +1635,14 @@ export const App: React.FC = () => {
                   <div className="xp-start-item-subtext">Počni od prvog nivoa</div>
                 </div>
               </div>
-              <div className="xp-start-item" onClick={() => toggleWindow('terminal')}>
+              <div className="xp-start-item" onClick={() => { toggleWindow('terminal'); setIsStartOpen(false); }}>
                 <span style={{ fontSize: '20px' }}>💻</span>
                 <div>
                   <strong>Git Command Prompt</strong>
                   <div className="xp-start-item-subtext">Terminal za kucanje komandi</div>
                 </div>
               </div>
-              <div className="xp-start-item" onClick={() => toggleWindow('graph')}>
+              <div className="xp-start-item" onClick={() => { toggleWindow('graph'); setIsStartOpen(false); }}>
                 <span style={{ fontSize: '20px' }}>📊</span>
                 <div>
                   <strong>Git Graph Explorer</strong>
@@ -976,7 +1650,7 @@ export const App: React.FC = () => {
                 </div>
               </div>
               <div className="xp-start-separator" />
-              <div className="xp-start-item" style={{ marginTop: 'auto' }} onClick={() => toggleWindow('credits')}>
+              <div className="xp-start-item" style={{ marginTop: 'auto' }} onClick={() => { toggleWindow('credits'); setIsStartOpen(false); }}>
                 <span style={{ fontSize: '20px' }}>ℹ️</span>
                 <div>
                   <strong>About Luna Git</strong>
@@ -986,12 +1660,12 @@ export const App: React.FC = () => {
             </div>
 
             <div className="xp-start-right">
-              <div className="xp-start-item" onClick={() => toggleWindow('instructions')}>
+              <div className="xp-start-item" onClick={() => { toggleWindow('instructions'); setIsStartOpen(false); }}>
                 <span>📖</span>
                 <span>Uputstva za nivoe</span>
               </div>
               <div className="xp-start-item" onClick={() => {
-                const nextLevelId = completedLevels.length > 0 ? Math.min(Math.max(...completedLevels) + 1, 10) : 1;
+                const nextLevelId = completedLevels.length > 0 ? Math.min(Math.max(...completedLevels) + 1, levels.length) : 1;
                 const nextIdx = levels.findIndex(l => l.id === nextLevelId);
                 if (nextIdx !== -1) {
                   setCurrentLevelIdx(nextIdx);
@@ -1000,6 +1674,19 @@ export const App: React.FC = () => {
               }}>
                 <span>🎮</span>
                 <span>Nastavi napredak</span>
+              </div>
+              <div className="xp-start-separator" />
+              <div className="xp-start-item" onClick={() => { toggleWindow('controlPanel'); setIsStartOpen(false); }}>
+                <span>🎛️</span>
+                <span>Control Panel</span>
+              </div>
+              <div className="xp-start-item" onClick={() => { toggleWindow('trivia'); setIsStartOpen(false); }}>
+                <span>🧠</span>
+                <span>Doge Trivia Kviz</span>
+              </div>
+              <div className="xp-start-item" onClick={() => { toggleWindow('certificate'); setIsStartOpen(false); }}>
+                <span>📜</span>
+                <span>XP Sertifikat</span>
               </div>
               <div className="xp-start-separator" />
               <div className="xp-start-item" onClick={resetAllProgress}>

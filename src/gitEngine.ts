@@ -25,6 +25,8 @@ export interface RepoState {
   remoteCommits?: { [id: string]: Commit };
   remoteBranches?: { [name: string]: string };
   hasRemote?: boolean;
+  stash?: { staged: string[]; modified: string[]; untracked: string[]; }[];
+  tags?: { [name: string]: string };
 }
 
 // Inicijalno prazno stanje
@@ -305,18 +307,52 @@ export const executeGitCommand = (
     }
 
     case 'commit': {
+      const hasAmend = parts.includes('--amend');
+
       // Provera -m parametra
       const mIdx = parts.indexOf('-m');
       let msg = '';
       if (mIdx !== -1 && parts[mIdx + 1]) {
         // Spajamo sve argumente posle -m u jednu poruku ako ima navodnika
         const fullString = parts.slice(mIdx + 1).join(' ');
-        msg = fullString.replace(/['"]/g, '');
-      } else {
+        msg = fullString.replace(/['"]/g, '').replace(/--amend/g, '').trim();
+      } else if (!hasAmend) {
         return {
           newState: state,
           output: `error: morate proslediti poruku commit-a koristeći -m "poruka".`,
           error: true
+        };
+      }
+
+      if (hasAmend) {
+        const currentCommit = getCurrentCommitId(state);
+        if (!currentCommit || !state.commits[currentCommit]) {
+          return {
+            newState: state,
+            output: `fatal: nema commit-a za izmenu.`,
+            error: true
+          };
+        }
+        const lastCommit = state.commits[currentCommit];
+        const updatedCommit: Commit = {
+          ...lastCommit,
+          message: msg || lastCommit.message
+        };
+        const updatedCommits = { ...state.commits, [currentCommit]: updatedCommit };
+        const newState: RepoState = {
+          ...state,
+          commits: updatedCommits,
+          index: { staged: [], deleted: [] },
+          workingDirectory: {
+            ...state.workingDirectory,
+            files: Array.from(new Set([...state.workingDirectory.files, ...state.index.staged])),
+            untracked: []
+          }
+        };
+        return {
+          newState,
+          output: `[${state.head.type === 'branch' ? state.head.target : 'detached HEAD'} (amended) ${currentCommit}] ${updatedCommit.message}\n Popravljen i izmenjen poslednji commit uspešno!`,
+          error: false
         };
       }
 
@@ -370,6 +406,23 @@ export const executeGitCommand = (
     }
 
     case 'branch': {
+      const uFlagIdx = parts.indexOf('-u') !== -1 ? parts.indexOf('-u') : parts.indexOf('--set-upstream-to');
+      if (uFlagIdx !== -1) {
+        const upstream = parts[uFlagIdx + 1];
+        const localBranch = parts[uFlagIdx + 2] || (state.head.type === 'branch' ? state.head.target : null);
+        if (!upstream) {
+          return { newState: state, output: `error: morate navesti udaljenu granu za povezivanje (npr. origin/master)`, error: true };
+        }
+        if (!localBranch || !state.branches[localBranch]) {
+          return { newState: state, output: `error: lokalna grana ne postoji ili niste na grani.`, error: true };
+        }
+        return {
+          newState: state,
+          output: `Grana '${localBranch}' je podešena da prati udaljenu granu '${upstream}' sa servera.`,
+          error: false
+        };
+      }
+
       const branchName = parts[2];
       const deleteFlag = parts.includes('-d') || parts.includes('-D');
 
@@ -993,6 +1046,210 @@ export const executeGitCommand = (
         output: fetchResult.output + '\n' + mergeResult.output,
         error: mergeResult.error
       };
+    }
+
+    case 'stash': {
+      const option = parts[2]; // git stash <pop/list/clear>
+      if (!option) {
+        // Običan git stash: sklanja staged i modified fajlove
+        const modifiedFiles = [...state.workingDirectory.modified];
+        const stagedFiles = [...state.index.staged];
+        
+        if (modifiedFiles.length === 0 && stagedFiles.length === 0) {
+          return {
+            newState: state,
+            output: `Nema lokalnih promena za sklanjanje. Radno stablo je čisto.`,
+            error: false
+          };
+        }
+
+        const newStashItem = {
+          staged: stagedFiles,
+          modified: modifiedFiles,
+          untracked: []
+        };
+
+        const updatedStash = state.stash ? [...state.stash, newStashItem] : [newStashItem];
+
+        const newState: RepoState = {
+          ...state,
+          index: { staged: [], deleted: [] },
+          workingDirectory: {
+            ...state.workingDirectory,
+            modified: [],
+          },
+          stash: updatedStash
+        };
+
+        return {
+          newState,
+          output: `Saved working directory and index state WIP on ${state.head.target}: korak stash-a sačuvan.\nRadno stablo je sada čisto!`,
+          error: false
+        };
+      } else if (option === 'pop') {
+        if (!state.stash || state.stash.length === 0) {
+          return {
+            newState: state,
+            output: `fatal: nema sačuvanih stash-eva za vraćanje.`,
+            error: true
+          };
+        }
+
+        const updatedStash = [...state.stash];
+        const poppedItem = updatedStash.pop()!;
+
+        const newState: RepoState = {
+          ...state,
+          index: {
+            ...state.index,
+            staged: Array.from(new Set([...state.index.staged, ...poppedItem.staged]))
+          },
+          workingDirectory: {
+            ...state.workingDirectory,
+            modified: Array.from(new Set([...state.workingDirectory.modified, ...poppedItem.modified]))
+          },
+          stash: updatedStash
+        };
+
+        return {
+          newState,
+          output: `Preuzete i primenjene promene iz stash-a na radno stablo!\nUklonjena stavka stash-a.`,
+          error: false
+        };
+      } else if (option === 'list') {
+        const listOutput = state.stash && state.stash.length > 0
+          ? state.stash.map((_, idx) => `stash@{${idx}}: WIP on ${state.head.target}: sačuvano stanje`).join('\n')
+          : `Nema sačuvanih stash stavki.`;
+        return {
+          newState: state,
+          output: listOutput,
+          error: false
+        };
+      } else {
+        return {
+          newState: state,
+          output: `Opcija '${option}' za git stash nije podržana. Koristite 'git stash' ili 'git stash pop'.`,
+          error: true
+        };
+      }
+    }
+
+    case 'tag': {
+      const tagName = parts[2];
+      if (!tagName) {
+        const allTags = state.tags ? Object.keys(state.tags).join('\n') : '';
+        return {
+          newState: state,
+          output: allTags || `Nema kreiranih tagova.`,
+          error: false
+        };
+      }
+
+      const currentCommit = getCurrentCommitId(state);
+      if (!currentCommit) {
+        return {
+          newState: state,
+          output: `fatal: nema commit-a na koji se može staviti tag.`,
+          error: true
+        };
+      }
+
+      const updatedTags = { ...state.tags, [tagName]: currentCommit };
+      const newState: RepoState = {
+        ...state,
+        tags: updatedTags
+      };
+
+      return {
+        newState,
+        output: `Kreiran tag '${tagName}' na commit-u ${currentCommit} uspešno!`,
+        error: false
+      };
+    }
+
+    case 'diff': {
+      const isStaged = parts.includes('--staged') || parts.includes('--cached');
+      if (isStaged) {
+        if (state.index.staged.length === 0) {
+          return {
+            newState: state,
+            output: `Nema pripremljenih promena za prikaz (staging area je prazna).`,
+            error: false
+          };
+        }
+        return {
+          newState: state,
+          output: state.index.staged.map(f => `diff --git a/${f} b/${f}\n--- a/${f}\n+++ b/${f}\n@@ -1 +1 @@\n+ Nova pripremljena linija u ${f}`).join('\n\n'),
+          error: false
+        };
+      } else {
+        if (state.workingDirectory.modified.length === 0) {
+          return {
+            newState: state,
+            output: `Nema nepripremljenih modifikacija u radnom direktorijumu.`,
+            error: false
+          };
+        }
+        return {
+          newState: state,
+          output: state.workingDirectory.modified.map(f => `diff --git a/${f} b/${f}\n--- a/${f}\n+++ b/${f}\n@@ -1,1 +1,2 @@\n- Stara verzija fajla ${f}\n+ Nova nepripremljena izmena u ${f}`).join('\n\n'),
+          error: false
+        };
+      }
+    }
+
+    case 'reflog': {
+      const currentCommit = getCurrentCommitId(state) || 'C1';
+      return {
+        newState: state,
+        output: `${currentCommit} HEAD@{0}: checkout: moving from develop to master
+${currentCommit} HEAD@{1}: commit: Dodat novi feature
+C1 HEAD@{2}: commit: Inicijalni commit sa predavanja
+C0 HEAD@{3}: clone: from https://github.com/igord/git-kurs.git`,
+        error: false
+      };
+    }
+
+    case 'bisect': {
+      const sub = parts[2];
+      if (!sub) {
+        return {
+          newState: state,
+          output: `Korišćenje: git bisect [start|bad|good|reset]`,
+          error: true
+        };
+      }
+      if (sub === 'start') {
+        return {
+          newState: state,
+          output: `status: bisecting: 3 commits preostalo za testiranje nakon ovoga (otprilike 2 koraka)\n[C2] Rad na feature grani`,
+          error: false
+        };
+      } else if (sub === 'bad') {
+        return {
+          newState: state,
+          output: `status: bisecting: 1 commit preostalo za testiranje nakon ovoga (otprilike 1 korak)\n[C1] Prvi commit (potencijalno loš)`,
+          error: false
+        };
+      } else if (sub === 'good') {
+        return {
+          newState: state,
+          output: `C1 je prvi loš commit (first bad commit)\ncommit C1\nAuthor: Luka <luka@example.com>\nDate: Sun May 24 15:22:50 2026\n\n    Uvedena greška u kodu`,
+          error: false
+        };
+      } else if (sub === 'reset') {
+        return {
+          newState: state,
+          output: `Završen bisect. Vraćen na originalni HEAD.`,
+          error: false
+        };
+      } else {
+        return {
+          newState: state,
+          output: `error: nepoznata bisect opcija '${sub}'`,
+          error: true
+        };
+      }
     }
 
     default:

@@ -435,5 +435,350 @@ Nalaziš se na svojoj lokalnoj grani \`master\` (na commit-u C1). Na udaljenom s
       );
     },
     expectedCommands: ["git pull"]
+  },
+  {
+    id: 11,
+    title: "Privremeno sklanjanje izmena: Git Stash",
+    category: "Srednji nivo",
+    description: `### Privremeno sklanjanje izmena: Git Stash
+Često se dešava da radite na nekom složenom zadatku i vaši fajlovi su u "polu-dovršenom" stanju, a onda morate hitno da se prebacite na drugu granu da popravite kritičan bag.
+Git vam ne dozvoljava da promenite granu ako imate nepripremljene izmene koje bi mogle biti prebrisane.
+
+Da ne biste morali da pravite besmislene "WIP" commit-e, koristite **\`git stash\`**.
+Ova komanda uzima sve vaše trenutne lokalne izmene (i iz pripremne zone i iz radnog direktorijuma), sklanja ih na tajni interni "stek", i vraća vaše radno stablo u savršeno čisto stanje.
+
+Kada završite hitan posao i vratite se nazad, ukucajte **\`git stash pop\`** da biste vratili te sačuvane promene nazad na svoje radno stablo i nastavili tačno tamo gde ste stali!
+
+**Tvoj zadatak:**
+1. Imate modifikovan fajl \`readme.txt\`. Sklonite izmene sa \`git stash\`.
+2. Vratite izmene nazad na radno stablo sa \`git stash pop\`.`,
+    hint: "Ukucaj redom:\n1. `git stash` da skloniš promene.\n2. `git stash pop` da ih vratiš na radno stablo.",
+    initialState: {
+      commits: {
+        C0: { id: 'C0', parentIds: [], message: 'Inicijalni commit' }
+      },
+      branches: { master: 'C0' },
+      head: { type: 'branch', target: 'master' },
+      index: { staged: [], deleted: [] },
+      workingDirectory: {
+        files: ['readme.txt'],
+        modified: ['readme.txt'],
+        untracked: []
+      },
+      hasRemote: false,
+      stash: []
+    },
+    validate: (state: RepoState) => {
+      return state.workingDirectory.modified.includes('readme.txt') && (!state.stash || state.stash.length === 0);
+    },
+    expectedCommands: ["git stash", "git stash pop"]
+  },
+  {
+    id: 12,
+    title: "Pregledanje izmena sa git diff",
+    category: "Srednji nivo",
+    description: `### Pregledanje izmena sa git diff
+Kao dobar programer, pre nego što dodate fajlove u pripremnu zonu ili napravite commit, uvek treba detaljno da pregledate šta ste tačno promenili u kodu.
+
+U tu svrhu koristimo komandu **\`git diff\`**:
+*   \`git diff\` - Prikazuje razliku između vašeg trenutnog radnog direktorijuma i pripremne zone (staging area). Odlično da vidite šta još niste pripremili!
+*   \`git diff --staged\` (ili \`git diff --cached\`) - Prikazuje razliku između pripremne zone i poslednjeg commit-a. Odlično da vidite šta će tačno ući u sledeći commit!
+
+**Tvoj zadatak:**
+1. Imate nepripremljene izmene u fajlu \`readme.txt\`. Pogledajte ih sa \`git diff\`.
+2. Dodajte fajl u pripremnu zonu sa \`git add readme.txt\`.
+3. Pogledajte pripremljene izmene sa \`git diff --staged\` (ili \`git diff --cached\`).`,
+    hint: "Ukucaj redom:\n1. `git diff` da vidiš lokalne razlike.\n2. `git add readme.txt` da pripremiš fajl.\n3. `git diff --staged` da vidiš šta ide u commit.",
+    initialState: {
+      commits: {
+        C0: { id: 'C0', parentIds: [], message: 'Inicijalni commit' }
+      },
+      branches: { master: 'C0' },
+      head: { type: 'branch', target: 'master' },
+      index: { staged: [], deleted: [] },
+      workingDirectory: {
+        files: ['readme.txt'],
+        modified: ['readme.txt'],
+        untracked: []
+      },
+      hasRemote: false
+    },
+    validate: (state: RepoState) => {
+      return state.index.staged.includes('readme.txt');
+    },
+    expectedCommands: ["git diff", "git add", "git diff"]
+  },
+  {
+    id: 13,
+    title: "Označavanje važnih trenutaka sa git tag",
+    category: "Srednji nivo",
+    description: `### Označavanje važnih trenutaka sa git tag
+U toku razvoja softvera, određeni commit-i predstavljaju prekretnice - kao što su zvanična izdanja (npr. verzija \`v1.0\`, \`v2.0\`).
+Umesto da pamtimo komplikovane SHA1 hešove tih commit-ova, možemo im dodeliti lako čitljive oznake (tags).
+
+Komanda **\`git tag <ime_taga>\`** kreira trajnu oznaku na commit-u na kome se trenutno nalazi \`HEAD\`.
+
+**Tvoj zadatak:**
+1. Označite trenutni commit verzijom \`v1.0\` koristeći komandu \`git tag v1.0\`.`,
+    hint: "Samo ukucaj:\n`git tag v1.0`",
+    initialState: {
+      commits: {
+        C0: { id: 'C0', parentIds: [], message: 'Inicijalni commit' },
+        C1: { id: 'C1', parentIds: ['C0'], message: 'Spremno za produkciju' }
+      },
+      branches: { master: 'C1' },
+      head: { type: 'branch', target: 'master' },
+      index: { staged: [], deleted: [] },
+      workingDirectory: {
+        files: ['readme.txt'],
+        modified: [],
+        untracked: []
+      },
+      hasRemote: false,
+      tags: {}
+    },
+    validate: (state: RepoState) => {
+      return state.tags !== undefined && state.tags['v1.0'] !== undefined;
+    },
+    expectedCommands: ["git tag"]
+  },
+  {
+    id: 14,
+    title: "Kada se grane sukobe: Merge Konflikt",
+    category: "Konflikti i Saradnja",
+    description: `### Kada se grane sukobe: Merge Konflikt
+Kada spajate dve grane koje su menjale **istu liniju u istom fajlu**, Git ne može sam da odluči koja verzija je ispravna. U tom trenutku proces spajanja se zaustavlja i Git javlja **Merge Konflikt**.
+
+Git tada upisuje specijalne konfliktne oznake direktno u konfliktne fajlove:
+\`<<<<<<< HEAD\`
+Tvoja izmena
+\`=======\`
+Izmena sa druge grane
+\`>>>>>>> feature\`
+
+Zadatak programera je da:
+1. Otvori fajl i obriše konfliktne oznake, ostavljajući samo ispravan kod.
+2. Pripremi rešen fajl sa \`git add <fajl>\`.
+3. Dovrši spajanje sa \`git commit\`.
+
+**Tvoj zadatak:**
+Pokušali ste spajanje grane \`feature\` u \`master\` i dobili konflikt u fajlu \`glavna.py\`.
+1. Razrešite konflikt tako što ćete pripremiti fajl \`glavna.py\` za commit koristeći \`git add glavna.py\`.
+2. Dovršite merge commit sa porukom "Rešen konflikt" koristeći \`git commit -m "Rešen konflikt"\`.`,
+    hint: "Ukucaj redom:\n1. `git add glavna.py` da označiš konflikt kao rešen.\n2. `git commit -m \"Rešen konflikt\"` da dovršiš spajanje.",
+    initialState: {
+      commits: {
+        C0: { id: 'C0', parentIds: [], message: 'Zajednički predak' },
+        C1: { id: 'C1', parentIds: ['C0'], message: 'Izmena na masteru' },
+        C2: { id: 'C2', parentIds: ['C0'], message: 'Izmena na feature grani' }
+      },
+      branches: { master: 'C1', feature: 'C2' },
+      head: { type: 'branch', target: 'master' },
+      index: { staged: [], deleted: [] },
+      workingDirectory: {
+        files: ['glavna.py'],
+        modified: ['glavna.py'],
+        untracked: []
+      },
+      hasRemote: false
+    },
+    validate: (state: RepoState) => {
+      const commitIds = Object.keys(state.commits);
+      const masterCommitId = state.branches['master'];
+      const masterCommit = state.commits[masterCommitId];
+      return (
+        commitIds.length > 3 &&
+        masterCommit &&
+        masterCommit.parentIds.length >= 2 &&
+        state.index.staged.length === 0
+      );
+    },
+    expectedCommands: ["git add", "git commit"]
+  },
+  {
+    id: 15,
+    title: "Povezivanje grana sa serverom: Upstream",
+    category: "Konflikti i Saradnja",
+    description: `### Povezivanje grana sa serverom: Upstream
+Kada kreirate novu lokalnu granu, ona nema direktnu vezu sa udaljenim serverom. Kada pokušate da uradite \`git push\` ili \`git pull\`, Git neće znati na koju granu na serveru treba da pošalje ili preuzme promene.
+
+Da bismo povezali lokalnu granu sa udaljenom, koristimo opciju **\`-u\`** (ili \`--set-upstream-to\`):
+\`git branch -u origin/master\` ili \`git push -u origin feature\`
+
+Ovo stvara trajnu vezu, pa ubuduće možete samo kucati jednostavne komande \`git push\` i \`git pull\` bez ikakvih argumenata!
+
+**Tvoj zadatak:**
+1. Postavite upstream vezu za vašu trenutnu lokalnu granu \`master\` tako da prati udaljenu granu \`origin/master\` koristeći \`git branch -u origin/master\`.`,
+    hint: "Samo ukucaj:\n`git branch -u origin/master` da povežeš granu sa serverom.",
+    initialState: {
+      commits: {
+        C0: { id: 'C0', parentIds: [], message: 'Inicijalni commit' }
+      },
+      branches: { master: 'C0' },
+      head: { type: 'branch', target: 'master' },
+      index: { staged: [], deleted: [] },
+      workingDirectory: {
+        files: ['readme.txt'],
+        modified: [],
+        untracked: []
+      },
+      remoteCommits: {
+        C0: { id: 'C0', parentIds: [], message: 'Inicijalni commit', isRemote: true }
+      },
+      remoteBranches: {
+        'origin/master': 'C0'
+      },
+      hasRemote: true
+    },
+    validate: () => {
+      return true;
+    },
+    expectedCommands: ["git branch"]
+  },
+  {
+    id: 16,
+    title: "Uređivanje istorije: Interaktivni Rebase",
+    category: "Konflikti i Saradnja",
+    description: `### Uređivanje istorije: Interaktivni Rebase
+Pre nego što pošaljete svoj kod celom timu na server, korisno je da "počistite" svoju istoriju commit-ova - na primer, spojite sitne popravke u jedan smislen commit, izmenite poruke, ili obrišete nepotrebne commit-e.
+
+To radimo pomoću **\`git rebase -i <commit-id>\`** (opcija \`-i\` znači interaktivno).
+Ova komanda otvara retro editor gde za svaki commit možete izabrati akciju:
+*   \`pick\` - zadrži commit
+*   \`reword\` - promeni samo poruku commit-a
+*   \`squash\` - spoji ovaj commit sa prethodnim
+
+**Tvoj zadatak:**
+1. Pokrenite interaktivni rebase na granu \`master\` koristeći \`git rebase -i master\`.`,
+    hint: "Nalaziš se na feature grani. Samo ukucaj:\n`git rebase -i master`",
+    initialState: {
+      commits: {
+        C0: { id: 'C0', parentIds: [], message: 'Zajednički predak' },
+        C1: { id: 'C1', parentIds: ['C0'], message: 'Commit na masteru' },
+        C2: { id: 'C2', parentIds: ['C0'], message: 'Sitna izmena 1' },
+        C3: { id: 'C3', parentIds: ['C2'], message: 'Sitna izmena 2' }
+      },
+      branches: { master: 'C1', feature: 'C3' },
+      head: { type: 'branch', target: 'feature' },
+      index: { staged: [], deleted: [] },
+      workingDirectory: {
+        files: ['readme.txt'],
+        modified: [],
+        untracked: []
+      },
+      hasRemote: false
+    },
+    validate: () => {
+      return true;
+    },
+    expectedCommands: ["git rebase"]
+  },
+  {
+    id: 17,
+    title: "Brza popravka poslednjeg commit-a",
+    category: "Napredne Komande",
+    description: `### Brza popravka poslednjeg commit-a
+Napravili ste commit, ali ste sekundu kasnije shvatili da ste zaboravili da dodate jedan fajl ili ste napravili slovnu grešku u poruci commit-a? Bez brige, nema potrebe da pravite novu "vremensku kapsulu" za tako sitnu izmenu.
+
+Komanda **\`git commit --amend\`** vam omogućava da "otvorite" poslednji commit, dodate nove pripremljene fajlove u njega i izmenite njegovu poruku!
+
+*Zlatno pravilo:* Koristite \`--amend\` samo za lokalne commit-e koje još niste poslali na udaljeni server!
+
+**Tvoj zadatak:**
+1. Imate pripremljen fajl \`readme.txt\`.
+2. Prepravite poslednji commit dodavanjem tog fajla i promenite mu poruku u "Ispravljen inicijalni rad" koristeći \`git commit --amend -m "Ispravljen inicijalni rad"\`.`,
+    hint: "Zadatak zahteva tačnu komandu:\n`git commit --amend -m \"Ispravljen inicijalni rad\"`",
+    initialState: {
+      commits: {
+        C0: { id: 'C0', parentIds: [], message: 'Inicijalni rad sa greškom' }
+      },
+      branches: { master: 'C0' },
+      head: { type: 'branch', target: 'master' },
+      index: { staged: ['readme.txt'], deleted: [] },
+      workingDirectory: {
+        files: ['readme.txt'],
+        modified: [],
+        untracked: []
+      },
+      hasRemote: false
+    },
+    validate: (state: RepoState) => {
+      const currentCommit = state.branches['master'];
+      return state.commits[currentCommit]?.message === 'Ispravljen inicijalni rad' && state.index.staged.length === 0;
+    },
+    expectedCommands: ["git commit"]
+  },
+  {
+    id: 18,
+    title: "Spasavanje obrisanog koda sa git reflog",
+    category: "Napredne Komande",
+    description: `### Spasavanje obrisanog koda sa git reflog
+U Git-u je izuzetno teško trajno izgubiti podatke kada su jednom commit-ovani. Čak i ako greškom obrišete granu ili uradite \`git reset --hard\` na pogrešan commit, Git potajno pamti svaku vašu akciju!
+
+Komanda **\`git reflog\`** (reference log) prikazuje kompletan istorijski dnevnik pomeranja vašeg \`HEAD\` pokazivača.
+Svaki put kada promenite granu, napravite commit, uradite reset ili rebase, ovde se upisuje zapis. Iz ovog dnevnika možete saznati SHA1 heš bilo kog commit-a koji ste naizgled trajno izgubili i vratiti se na njega sa \`git reset --hard\`!
+
+**Tvoj zadatak:**
+1. Otvorite istorijski dnevnik kretanja HEAD-a koristeći komandu \`git reflog\`.`,
+    hint: "Samo ukucaj:\n`git reflog` da pogledaš dnevnik akcija.",
+    initialState: {
+      commits: {
+        C0: { id: 'C0', parentIds: [], message: 'Inicijalni commit' },
+        C1: { id: 'C1', parentIds: ['C0'], message: 'Novi feature' }
+      },
+      branches: { master: 'C1' },
+      head: { type: 'branch', target: 'master' },
+      index: { staged: [], deleted: [] },
+      workingDirectory: {
+        files: ['readme.txt'],
+        modified: [],
+        untracked: []
+      },
+      hasRemote: false
+    },
+    validate: () => {
+      return true;
+    },
+    expectedCommands: ["git reflog"]
+  },
+  {
+    id: 19,
+    title: "Pronalaženje bagova binarnom pretragom",
+    category: "Napredne Komande",
+    description: `### Pronalaženje bagova binarnom pretragom
+Imate ogroman projekat sa stotinama commit-ova i shvatili ste da neka funkcija više ne radi. Bag je uveden negde u prošlosti, ali nemate pojma u kom tačno commit-u.
+
+Umesto da ručno proveravate svaki commit jedan po jedan, koristite **\`git bisect\`** koji koristi algoritam binarne pretrage da brzo i automatski locira "prvi loš commit" (first bad commit):
+1.  \`git bisect start\` - Pokreće pretragu.
+2.  \`git bisect bad\` - Označava trenutni commit kao neispravan.
+3.  \`git bisect good <commit>\` - Označava neki stari commit u prošlosti za koji znate da je sigurno radio ispravno.
+Git će vas automatski prebaciti na commit na polovini tog opsega. Vi testirate kod i javljate Git-u sa \`git bisect good\` ili \`git bisect bad\`. Ovaj proces se ponavlja dok ne pronađe tačan commit koji je uveo bag!
+
+**Tvoj zadatak:**
+1. Pokrenite proces pretrage sa \`git bisect start\`.
+2. Označite trenutni commit kao loš sa \`git bisect bad\`.
+3. Označite commit \`C0\` kao dobar sa \`git bisect good C0\`.`,
+    hint: "Ukucaj redom:\n1. `git bisect start` da pokreneš pretragu.\n2. `git bisect bad` da označiš trenutni kao loš.\n3. `git bisect good C0` da označiš C0 kao ispravnu tačku.",
+    initialState: {
+      commits: {
+        C0: { id: 'C0', parentIds: [], message: 'Inicijalni stabilni rad' },
+        C1: { id: 'C1', parentIds: ['C0'], message: 'Uvedena greška' },
+        C2: { id: 'C2', parentIds: ['C1'], message: 'Rad na dizajnu' },
+        C3: { id: 'C3', parentIds: ['C2'], message: 'Trenutni neispravan rad' }
+      },
+      branches: { master: 'C3' },
+      head: { type: 'branch', target: 'master' },
+      index: { staged: [], deleted: [] },
+      workingDirectory: {
+        files: ['readme.txt'],
+        modified: [],
+        untracked: []
+      },
+      hasRemote: false
+    },
+    validate: () => {
+      return true;
+    },
+    expectedCommands: ["git bisect", "git bisect", "git bisect"]
   }
 ];
