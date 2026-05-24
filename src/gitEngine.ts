@@ -678,7 +678,9 @@ export const executeGitCommand = (
     }
 
     case 'rebase': {
-      const targetBranch = parts[2];
+      // Filtriraj interaktivne flagove iz argumenata
+      const cleanParts = parts.filter(p => p !== '-i' && p !== '--interactive');
+      const targetBranch = cleanParts[2];
       if (!targetBranch) {
         return { newState: state, output: `fatal: morate proslediti ciljnu granu za rebase.`, error: true };
       }
