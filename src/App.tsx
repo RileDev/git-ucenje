@@ -119,7 +119,7 @@ const parseMarkdownToHtml = (markdown: string): string => {
 
 const bgStyles: Record<string, React.CSSProperties & Record<string, string>> = {
   bliss: {
-    backgroundImage: "url('/bliss.png')",
+    backgroundImage: "url('bliss.png')",
     backgroundSize: "cover",
     backgroundPosition: "center",
     "--xp-blue-dark": "#002e80",
