@@ -278,6 +278,7 @@ export const App: React.FC = () => {
         return { ...w, active: false };
       })
     );
+    setIsStartOpen(false);
   };
 
   const closeWindow = (id: string, e?: React.MouseEvent) => {
