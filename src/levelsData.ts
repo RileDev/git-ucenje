@@ -506,7 +506,7 @@ U tu svrhu koristimo komandu **\`git diff\`**:
     validate: (state: RepoState) => {
       return state.index.staged.includes('readme.txt');
     },
-    expectedCommands: ["git diff", "git add", "git diff"]
+    expectedCommands: ["git diff", "git add", "git diff --staged"]
   },
   {
     id: 13,
@@ -580,7 +580,8 @@ Pokušali ste spajanje grane \`feature\` u \`master\` i dobili konflikt u fajlu 
         modified: ['glavna.py'],
         untracked: []
       },
-      hasRemote: false
+      hasRemote: false,
+      mergeInProgress: 'C2'
     },
     validate: (state: RepoState) => {
       const commitIds = Object.keys(state.commits);

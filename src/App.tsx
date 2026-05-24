@@ -756,6 +756,22 @@ export const App: React.FC = () => {
     }
   };
 
+  // Restartovanje samo trenutnog nivoa
+  const resetCurrentLevel = () => {
+    if (window.confirm(`Da li ste sigurni da želite da resetujete stanje za trenutni nivo "${currentLevel.title}"? Sve unete komande i stanje fajlova za ovaj nivo će biti vraćeni na početak.`)) {
+      setRepoState(JSON.parse(JSON.stringify(currentLevel.initialState)));
+      setLevelCommandsRun([]);
+      setTerminalHistory([
+        {
+          input: 'clear',
+          output: `Stanje za nivo "${currentLevel.title}" je uspešno resetovano. Srećno učenje!\nUnesite prvu komandu...`
+        }
+      ]);
+      if (soundEnabled) playTone(400, 0, 0.25, 'sine');
+      setIsStartOpen(false);
+    }
+  };
+
   return (
     <div className="xp-desktop" style={bgStyles[bgTheme]}>
       {/* BSOD Plavi ekran smrti (Easter Egg) */}
@@ -899,7 +915,52 @@ export const App: React.FC = () => {
 
               {/* 1. Terminal Window Content */}
               {win.id === 'terminal' && (
-                <div className="xp-terminal" onClick={() => document.getElementById('term-input-field')?.focus()}>
+                <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                  {/* XP Toolbar */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '4px 6px',
+                    backgroundColor: 'var(--xp-window-bg, #ece9d8)',
+                    borderBottom: '1px solid var(--xp-window-border, #7ea7fc)',
+                    fontFamily: 'Tahoma, Arial, sans-serif',
+                    fontSize: '11px',
+                    color: '#000000',
+                    boxSizing: 'border-box'
+                  }}>
+                    <button
+                      className="xp-button"
+                      onClick={(e) => { e.stopPropagation(); resetCurrentLevel(); }}
+                      style={{
+                        padding: '2px 8px',
+                        fontSize: '11px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontWeight: 'normal',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      🔄 Resetuj nivo
+                    </button>
+                    <button
+                      className="xp-button"
+                      onClick={(e) => { e.stopPropagation(); setGitkoMsg(currentLevel.hint); if (soundEnabled) playTone(440, 0, 0.1, 'sine'); }}
+                      style={{
+                        padding: '2px 8px',
+                        fontSize: '11px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontWeight: 'normal',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      💡 Pomoć
+                    </button>
+                  </div>
+                  <div className="xp-terminal" style={{ flex: 1 }} onClick={() => document.getElementById('term-input-field')?.focus()}>
                   <div className="xp-terminal-history">
                     {terminalHistory.map((h, i) => (
                       <div key={i}>
@@ -929,7 +990,8 @@ export const App: React.FC = () => {
                     />
                   </form>
                 </div>
-              )}
+              </div>
+            )}
 
               {/* 2. Instructions Window Content */}
               {win.id === 'instructions' && (
@@ -1689,6 +1751,10 @@ export const App: React.FC = () => {
                 <span>XP Sertifikat</span>
               </div>
               <div className="xp-start-separator" />
+              <div className="xp-start-item" onClick={resetCurrentLevel}>
+                <span>⚡</span>
+                <span>Resetuj trenutni nivo</span>
+              </div>
               <div className="xp-start-item" onClick={resetAllProgress}>
                 <span>🔄</span>
                 <span>Resetuj napredak</span>

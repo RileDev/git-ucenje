@@ -27,6 +27,7 @@ export interface RepoState {
   hasRemote?: boolean;
   stash?: { staged: string[]; modified: string[]; untracked: string[]; }[];
   tags?: { [name: string]: string };
+  mergeInProgress?: string;
 }
 
 // Inicijalno prazno stanje
@@ -368,9 +369,14 @@ export const executeGitCommand = (
       const nextId = generateNextCommitId(state.commits);
       const currentCommit = getCurrentCommitId(state);
       
+      const parentIds = currentCommit ? [currentCommit] : [];
+      if (state.mergeInProgress) {
+        parentIds.push(state.mergeInProgress);
+      }
+
       const newCommit: Commit = {
         id: nextId,
-        parentIds: currentCommit ? [currentCommit] : [],
+        parentIds,
         message: msg
       };
 
@@ -394,13 +400,17 @@ export const executeGitCommand = (
         workingDirectory: {
           ...state.workingDirectory,
           files: Array.from(new Set([...state.workingDirectory.files, ...state.index.staged])),
+          modified: state.workingDirectory.modified.filter(f => !state.index.staged.includes(f)),
           untracked: []
-        }
+        },
+        mergeInProgress: undefined
       };
 
       return {
         newState,
-        output: `[${state.head.type === 'branch' ? state.head.target : 'detached HEAD'} ${nextId}] ${msg}\n 1 file changed, 1 insertion(+)`,
+        output: state.mergeInProgress 
+          ? `Spajanje napravljeno korišćenjem strategije 'recursive'.\n[${state.head.type === 'branch' ? state.head.target : 'detached HEAD'} ${nextId}] ${msg}`
+          : `[${state.head.type === 'branch' ? state.head.target : 'detached HEAD'} ${nextId}] ${msg}\n 1 file changed, 1 insertion(+)`,
         error: false
       };
     }
