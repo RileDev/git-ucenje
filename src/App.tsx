@@ -1093,12 +1093,16 @@ export const App: React.FC = () => {
               {/* 5. Control Panel Window Content */}
               {win.id === 'controlPanel' && (
                 <div style={{ padding: '15px', height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '15px', boxSizing: 'border-box' }}>
-                  <h3 style={{ color: '#002e80', borderBottom: '2px solid #b0c9ea', paddingBottom: '4px', margin: '0 0 10px 0' }}>
-                    🎛️ Podešavanja Ekosistema
+                  <h3 style={{ color: '#002e80', borderBottom: '2px solid #b0c9ea', paddingBottom: '4px', margin: '0 0 10px 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <img src="xp-control.png" alt="" style={{ width: '20px', height: '20px', objectFit: 'contain' }} />
+                    Podešavanja Ekosistema
                   </h3>
                   
                   <div>
-                    <h4 style={{ fontWeight: 'bold', marginBottom: '8px', color: '#333', fontSize: '12px' }}>🌄 Izaberi temu i izgled ekosistema (Themes)</h4>
+                    <h4 style={{ fontWeight: 'bold', marginBottom: '8px', color: '#333', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <img src="xp-palette.png" alt="" style={{ width: '16px', height: '16px', objectFit: 'contain' }} />
+                      Izaberi temu i izgled ekosistema (Themes)
+                    </h4>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
                       {[
                         { id: 'bliss', name: 'Bliss (XP Klasik)' },
@@ -1113,21 +1117,25 @@ export const App: React.FC = () => {
                             setBgTheme(t.id as any);
                             if (soundEnabled) playTone(500, 0, 0.1, 'sine');
                           }}
-                          style={{ padding: '8px', textAlign: 'left', fontSize: '11px' }}
+                          style={{ padding: '8px', textAlign: 'left', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}
                         >
-                          {bgTheme === t.id ? '🟢' : '⚪'} {t.name}
+                          <img src={bgTheme === t.id ? 'xp-radio-on.png' : 'xp-radio-off.png'} alt="" style={{ width: '12px', height: '12px', objectFit: 'contain' }} />
+                          {t.name}
                         </button>
                       ))}
                     </div>
                   </div>
 
                   <div>
-                    <h4 style={{ fontWeight: 'bold', marginBottom: '8px', color: '#333', fontSize: '12px' }}>🐶 Izaberi retro asistenta</h4>
+                    <h4 style={{ fontWeight: 'bold', marginBottom: '8px', color: '#333', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <img src="xp-user.png" alt="" style={{ width: '16px', height: '16px', objectFit: 'contain' }} />
+                      Izaberi retro asistenta
+                    </h4>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
                       {[
-                        { id: 'doge', name: 'Gitko Doge 🐶' },
-                        { id: 'snake', name: 'Solid Snake 📦' },
-                        { id: 'bonzi', name: 'BonziBuddy 🍇' }
+                        { id: 'doge', name: 'Gitko Doge', icon: 'doge.png' },
+                        { id: 'snake', name: 'Solid Snake', icon: 'snake.png' },
+                        { id: 'bonzi', name: 'BonziBuddy', icon: 'bonzi.png' }
                       ].map(a => (
                         <button
                           key={a.id}
@@ -1142,8 +1150,9 @@ export const App: React.FC = () => {
                             };
                             setGitkoMsg(welcomeMsgs[a.id as keyof typeof welcomeMsgs]);
                           }}
-                          style={{ padding: '8px', fontSize: '11px' }}
+                          style={{ padding: '8px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}
                         >
+                          <img src={a.icon} alt="" style={{ width: '16px', height: '16px', objectFit: 'contain' }} />
                           {a.name}
                         </button>
                       ))}
@@ -1151,7 +1160,10 @@ export const App: React.FC = () => {
                   </div>
 
                   <div>
-                    <h4 style={{ fontWeight: 'bold', marginBottom: '8px', color: '#333', fontSize: '12px' }}>🔊 Retro zvučni efekti</h4>
+                    <h4 style={{ fontWeight: 'bold', marginBottom: '8px', color: '#333', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <img src="xp-sound.png" alt="" style={{ width: '16px', height: '16px', objectFit: 'contain' }} />
+                      Retro zvučni efekti
+                    </h4>
                     <div style={{ display: 'flex', gap: '10px' }}>
                       <button
                         className={`xp-button ${soundEnabled ? 'xp-button-primary' : ''}`}
@@ -1161,9 +1173,10 @@ export const App: React.FC = () => {
                             setTimeout(() => playTone(600, 0, 0.15, 'sine'), 100);
                           }
                         }}
-                        style={{ flex: 1, padding: '8px', fontSize: '11px' }}
+                        style={{ flex: 1, padding: '8px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}
                       >
-                        {soundEnabled ? '🔊 Uključeni retro zvukovi' : '🔇 Zvukovi su isključeni'}
+                        <img src={soundEnabled ? 'xp-sound.png' : 'xp-sound-off.png'} alt="" style={{ width: '16px', height: '16px', objectFit: 'contain' }} />
+                        {soundEnabled ? 'Uključeni retro zvukovi' : 'Zvukovi su isključeni'}
                       </button>
                     </div>
                   </div>
