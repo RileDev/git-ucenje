@@ -836,11 +836,15 @@ export const App: React.FC = () => {
         <div
           className="xp-gitko-char"
           onClick={() => {
-            setGitkoMsg("Ja sam Gitko! Klikni na ikone na radnoj površini da otvoriš Git Graf ili Uputstvo.");
+            setGitkoMsg("Ja sam Gitko Doge! Mnogo git, vrlo grana, vau! Klikni na ikone na radnoj površini da otvoriš Git Graf ili Uputstvo.");
             if (soundEnabled) playTone(440, 0, 0.15, 'sine');
           }}
         >
-          📎
+          <img 
+            src="https://freepngimg.com/download/meme/97579-meme-doge-free-png-hq.png" 
+            alt="Gitko Doge" 
+            style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
+          />
         </div>
       </div>
 
