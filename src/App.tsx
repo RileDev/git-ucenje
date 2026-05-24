@@ -438,6 +438,21 @@ export const App: React.FC = () => {
     }
   };
 
+  // Tastaturni osluškivač za "Enter" taster kada je modal uspeha aktivan
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (showLevelSuccessModal && e.key === 'Enter') {
+        e.preventDefault();
+        handleNextLevel();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showLevelSuccessModal, handleNextLevel]);
+
   // Solitaire Bounce čestitka
   useEffect(() => {
     if (!showSolitaire || !solitaireCanvasRef.current) return;
