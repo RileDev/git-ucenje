@@ -478,7 +478,8 @@ export const executeGitCommand = (
           },
           workingDirectory: {
             ...state.workingDirectory,
-            untracked: Array.from(new Set([...state.workingDirectory.untracked, file]))
+            modified: state.workingDirectory.modified.filter(f => f !== file),
+            untracked: state.workingDirectory.untracked.filter(f => f !== file)
           }
         };
         return {
@@ -757,12 +758,24 @@ export const executeGitCommand = (
 
       if (!commitArg) {
         // Podrazumevano poništavanje index-a bez pomeranja HEAD
+        const newlyUntracked: string[] = [];
+        const newlyModified: string[] = [];
+
+        state.index.staged.forEach(file => {
+          if (state.workingDirectory.files.includes(file)) {
+            newlyModified.push(file);
+          } else {
+            newlyUntracked.push(file);
+          }
+        });
+
         const newState = {
           ...state,
           index: { staged: [], deleted: [] },
           workingDirectory: {
             ...state.workingDirectory,
-            untracked: Array.from(new Set([...state.workingDirectory.untracked, ...state.index.staged]))
+            modified: Array.from(new Set([...state.workingDirectory.modified, ...newlyModified])),
+            untracked: Array.from(new Set([...state.workingDirectory.untracked, ...newlyUntracked]))
           }
         };
         return { newState, output: `Nepripremljene promene nakon reseta.`, error: false };
