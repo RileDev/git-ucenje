@@ -139,7 +139,7 @@ const bgStyles: Record<string, React.CSSProperties & Record<string, string>> = {
     "--xp-text-muted": "#666666",
   },
   royale: {
-    backgroundImage: "url('https://images.unsplash.com/photo-1518837695005-2083093ee35b?q=80&w=1600')",
+    backgroundImage: "url('royale.jpg')",
     backgroundSize: "cover",
     backgroundPosition: "center",
     "--xp-blue-dark": "#002060",
@@ -159,7 +159,7 @@ const bgStyles: Record<string, React.CSSProperties & Record<string, string>> = {
     "--xp-text-muted": "#506590",
   },
   zune: {
-    backgroundImage: "url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1600')",
+    backgroundImage: "url('zune.jpg')",
     backgroundSize: "cover",
     backgroundPosition: "center",
     "--xp-blue-dark": "#1a1a1a",
@@ -829,37 +829,51 @@ export const App: React.FC = () => {
       {/* Desktop Icons */}
       <div className="xp-desktop-grid">
         <div className="xp-desktop-icon" onClick={() => toggleWindow('instructions')}>
-          <div className="xp-desktop-icon-img" style={{ fontSize: '28px' }}>📝</div>
+          <div className="xp-desktop-icon-img">
+            <img src="xp-notepad.png" alt="Uputstvo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          </div>
           <div className="xp-desktop-icon-text">Uputstvo</div>
         </div>
 
         <div className="xp-desktop-icon" onClick={() => toggleWindow('terminal')}>
-          <div className="xp-desktop-icon-img" style={{ fontSize: '28px' }}>💻</div>
+          <div className="xp-desktop-icon-img">
+            <img src="xp-terminal.png" alt="Git Terminal" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          </div>
           <div className="xp-desktop-icon-text">Git Terminal</div>
         </div>
 
         <div className="xp-desktop-icon" onClick={() => toggleWindow('graph')}>
-          <div className="xp-desktop-icon-img" style={{ fontSize: '28px' }}>📊</div>
+          <div className="xp-desktop-icon-img">
+            <img src="xp-folder.png" alt="Git Graf" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          </div>
           <div className="xp-desktop-icon-text">Git Graf</div>
         </div>
 
         <div className="xp-desktop-icon" onClick={() => toggleWindow('controlPanel')}>
-          <div className="xp-desktop-icon-img" style={{ fontSize: '28px' }}>🎛️</div>
+          <div className="xp-desktop-icon-img">
+            <img src="xp-control.png" alt="Control Panel" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          </div>
           <div className="xp-desktop-icon-text">Control Panel</div>
         </div>
 
         <div className="xp-desktop-icon" onClick={() => toggleWindow('trivia')}>
-          <div className="xp-desktop-icon-img" style={{ fontSize: '28px' }}>🧠</div>
+          <div className="xp-desktop-icon-img">
+            <img src="xp-game.png" alt="Doge Kviz" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          </div>
           <div className="xp-desktop-icon-text">Doge Kviz</div>
         </div>
 
         <div className="xp-desktop-icon" onClick={() => toggleWindow('certificate')}>
-          <div className="xp-desktop-icon-img" style={{ fontSize: '28px' }}>📜</div>
+          <div className="xp-desktop-icon-img">
+            <img src="xp-certificate.png" alt="Sertifikat" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          </div>
           <div className="xp-desktop-icon-text">Sertifikat</div>
         </div>
 
         <div className="xp-desktop-icon" onClick={() => toggleWindow('credits')}>
-          <div className="xp-desktop-icon-img" style={{ fontSize: '28px' }}>ℹ️</div>
+          <div className="xp-desktop-icon-img">
+            <img src="xp-info.png" alt="Credits" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          </div>
           <div className="xp-desktop-icon-text">Credits</div>
         </div>
       </div>
@@ -1511,10 +1525,10 @@ export const App: React.FC = () => {
                             <img
                               src={
                                 assistantChar === 'doge'
-                                  ? "https://freepngimg.com/download/meme/97579-meme-doge-free-png-hq.png"
+                                  ? "doge.png"
                                   : assistantChar === 'snake'
-                                  ? "https://www.nicepng.com/png/full/155-1557662_solid-snake-transparent-background-mgs-2-solid-snake.png"
-                                  : "https://static.wikia.nocookie.net/supermario231/images/3/3f/BonziBUDDY.png/revision/latest?cb=20190430062642"
+                                  ? "snake.png"
+                                  : "bonzi.png"
                               }
                               alt="Pečat"
                               style={{ width: '45px', height: '45px', objectFit: 'contain', transform: 'rotate(-10deg)' }}
@@ -1573,10 +1587,10 @@ export const App: React.FC = () => {
           <img 
             src={
               assistantChar === 'doge'
-                ? "https://freepngimg.com/download/meme/97579-meme-doge-free-png-hq.png"
+                ? "doge.png"
                 : assistantChar === 'snake'
-                ? "https://www.nicepng.com/png/full/155-1557662_solid-snake-transparent-background-mgs-2-solid-snake.png"
-                : "https://static.wikia.nocookie.net/supermario231/images/3/3f/BonziBUDDY.png/revision/latest?cb=20190430062642"
+                ? "snake.png"
+                : "bonzi.png"
             } 
             alt={assistantChar === 'doge' ? 'Gitko Doge' : assistantChar === 'snake' ? 'Solid Snake' : 'BonziBuddy'} 
             style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
