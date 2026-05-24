@@ -704,8 +704,9 @@ Komanda **\`git commit --amend\`** vam omogućava da "otvorite" poslednji commit
       hasRemote: false
     },
     validate: (state: RepoState) => {
-      const currentCommit = state.branches['master'];
-      return state.commits[currentCommit]?.message === 'Ispravljen inicijalni rad' && state.index.staged.length === 0;
+      const currentCommit = state.head.type === 'branch' ? state.branches[state.head.target] : state.head.target;
+      const msg = state.commits[currentCommit]?.message || '';
+      return msg.toLowerCase().trim() === 'ispravljen inicijalni rad' && state.index.staged.length === 0;
     },
     expectedCommands: ["git commit"]
   },
