@@ -671,7 +671,7 @@ export const App: React.FC = () => {
                     </button>
                     <button 
                       className="xp-button xp-button-primary"
-                      disabled={!completedLevels.includes(currentLevel.id)}
+                      disabled={!(completedLevels.includes(currentLevel.id) || currentLevel.id <= Math.max(...completedLevels, 0))}
                       onClick={() => {
                         if (currentLevelIdx < levels.length - 1) {
                           setCurrentLevelIdx(prev => prev + 1);
@@ -680,7 +680,7 @@ export const App: React.FC = () => {
                         }
                       }}
                     >
-                      Sledeći nivo {completedLevels.includes(currentLevel.id) ? '🔓' : '🔒'}
+                      Sledeći nivo {(completedLevels.includes(currentLevel.id) || currentLevel.id <= Math.max(...completedLevels, 0)) ? '🔓' : '🔒'}
                     </button>
                   </div>
                 </div>
