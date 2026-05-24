@@ -224,7 +224,7 @@ export const App: React.FC = () => {
     {
       id: 'instructions',
       title: 'Uputstvo za učenje',
-      icon: '📖',
+      icon: 'xp-notepad.png',
       x: 30,
       y: 40,
       w: 480,
@@ -237,7 +237,7 @@ export const App: React.FC = () => {
     {
       id: 'terminal',
       title: 'Komandna linija (Terminal)',
-      icon: '💻',
+      icon: 'xp-terminal.png',
       x: 540,
       y: 40,
       w: 520,
@@ -250,7 +250,7 @@ export const App: React.FC = () => {
     {
       id: 'graph',
       title: 'Vizuelni Git Graf',
-      icon: '📊',
+      icon: 'xp-folder.png',
       x: 540,
       y: 310,
       w: 520,
@@ -263,7 +263,7 @@ export const App: React.FC = () => {
     {
       id: 'credits',
       title: 'Zasluge i O Autoru',
-      icon: 'ℹ️',
+      icon: 'xp-info.png',
       x: 200,
       y: 100,
       w: 450,
@@ -276,7 +276,7 @@ export const App: React.FC = () => {
     {
       id: 'controlPanel',
       title: 'Control Panel (Kontrolna Tabla)',
-      icon: '🎛️',
+      icon: 'xp-control.png',
       x: 100,
       y: 80,
       w: 460,
@@ -289,7 +289,7 @@ export const App: React.FC = () => {
     {
       id: 'trivia',
       title: 'Doge Trivia Kviz',
-      icon: '🧠',
+      icon: 'xp-game.png',
       x: 120,
       y: 100,
       w: 460,
@@ -302,7 +302,7 @@ export const App: React.FC = () => {
     {
       id: 'certificate',
       title: 'Luna Git Sertifikat',
-      icon: '📜',
+      icon: 'xp-certificate.png',
       x: 140,
       y: 50,
       w: 680,
@@ -914,7 +914,11 @@ export const App: React.FC = () => {
               onMouseDown={(e) => handleTitleBarMouseDown(win.id, e)}
             >
               <div className="xp-window-title">
-                <span className="xp-window-title-icon">{win.icon}</span>
+                {win.icon.endsWith('.png') ? (
+                  <img src={win.icon} alt="" style={{ width: '16px', height: '16px', objectFit: 'contain', marginRight: '4px' }} />
+                ) : (
+                  <span className="xp-window-title-icon">{win.icon}</span>
+                )}
                 <span>{win.title}</span>
               </div>
               <div className="xp-window-controls">
@@ -1653,7 +1657,7 @@ export const App: React.FC = () => {
           className="xp-start-btn"
           onClick={() => setIsStartOpen(!isStartOpen)}
         >
-          <span style={{ fontSize: '18px' }}>🟢</span>
+          <img src="xp-start.png" alt="start logo" style={{ width: '18px', height: '18px', objectFit: 'contain' }} />
           <span>start</span>
         </button>
 
@@ -1675,7 +1679,11 @@ export const App: React.FC = () => {
                   }
                 }}
               >
-                <span className="xp-taskbar-icon">{win.icon}</span>
+                {win.icon.endsWith('.png') ? (
+                  <img src={win.icon} alt="" style={{ width: '16px', height: '16px', objectFit: 'contain', marginRight: '6px' }} />
+                ) : (
+                  <span className="xp-taskbar-icon">{win.icon}</span>
+                )}
                 <span className="xp-taskbar-text">{win.title}</span>
               </div>
             );
@@ -1713,21 +1721,21 @@ export const App: React.FC = () => {
           <div className="xp-start-content">
             <div className="xp-start-left">
               <div className="xp-start-item" onClick={() => { setCurrentLevelIdx(0); setIsStartOpen(false); }}>
-                <span style={{ fontSize: '20px' }}>🚀</span>
+                <img src="xp-computer.png" alt="" style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
                 <div>
                   <strong>Pokreni program za učenje</strong>
                   <div className="xp-start-item-subtext">Počni od prvog nivoa</div>
                 </div>
               </div>
               <div className="xp-start-item" onClick={() => { toggleWindow('terminal'); setIsStartOpen(false); }}>
-                <span style={{ fontSize: '20px' }}>💻</span>
+                <img src="xp-terminal.png" alt="" style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
                 <div>
                   <strong>Git Command Prompt</strong>
                   <div className="xp-start-item-subtext">Terminal za kucanje komandi</div>
                 </div>
               </div>
               <div className="xp-start-item" onClick={() => { toggleWindow('graph'); setIsStartOpen(false); }}>
-                <span style={{ fontSize: '20px' }}>📊</span>
+                <img src="xp-folder.png" alt="" style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
                 <div>
                   <strong>Git Graph Explorer</strong>
                   <div className="xp-start-item-subtext">Vizuelni pregled stabla</div>
@@ -1735,7 +1743,7 @@ export const App: React.FC = () => {
               </div>
               <div className="xp-start-separator" />
               <div className="xp-start-item" style={{ marginTop: 'auto' }} onClick={() => { toggleWindow('credits'); setIsStartOpen(false); }}>
-                <span style={{ fontSize: '20px' }}>ℹ️</span>
+                <img src="xp-info.png" alt="" style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
                 <div>
                   <strong>About Luna Git</strong>
                   <div className="xp-start-item-subtext">O autoru i predavanjima</div>
@@ -1745,7 +1753,7 @@ export const App: React.FC = () => {
 
             <div className="xp-start-right">
               <div className="xp-start-item" onClick={() => { toggleWindow('instructions'); setIsStartOpen(false); }}>
-                <span>📖</span>
+                <img src="xp-notepad.png" alt="" style={{ width: '16px', height: '16px', objectFit: 'contain', marginRight: '6px' }} />
                 <span>Uputstva za nivoe</span>
               </div>
               <div className="xp-start-item" onClick={() => {
@@ -1756,34 +1764,34 @@ export const App: React.FC = () => {
                 }
                 setIsStartOpen(false);
               }}>
-                <span>🎮</span>
+                <img src="xp-game.png" alt="" style={{ width: '16px', height: '16px', objectFit: 'contain', marginRight: '6px' }} />
                 <span>Nastavi napredak</span>
               </div>
               <div className="xp-start-separator" />
               <div className="xp-start-item" onClick={() => { toggleWindow('controlPanel'); setIsStartOpen(false); }}>
-                <span>🎛️</span>
+                <img src="xp-control.png" alt="" style={{ width: '16px', height: '16px', objectFit: 'contain', marginRight: '6px' }} />
                 <span>Control Panel</span>
               </div>
               <div className="xp-start-item" onClick={() => { toggleWindow('trivia'); setIsStartOpen(false); }}>
-                <span>🧠</span>
+                <img src="xp-game.png" alt="" style={{ width: '16px', height: '16px', objectFit: 'contain', marginRight: '6px' }} />
                 <span>Doge Trivia Kviz</span>
               </div>
               <div className="xp-start-item" onClick={() => { toggleWindow('certificate'); setIsStartOpen(false); }}>
-                <span>📜</span>
+                <img src="xp-certificate.png" alt="" style={{ width: '16px', height: '16px', objectFit: 'contain', marginRight: '6px' }} />
                 <span>XP Sertifikat</span>
               </div>
               <div className="xp-start-separator" />
               <div className="xp-start-item" onClick={resetCurrentLevel}>
-                <span>⚡</span>
+                <img src="xp-lightning.png" alt="" style={{ width: '16px', height: '16px', objectFit: 'contain', marginRight: '6px' }} />
                 <span>Resetuj trenutni nivo</span>
               </div>
               <div className="xp-start-item" onClick={resetAllProgress}>
-                <span>🔄</span>
+                <img src="xp-refresh.png" alt="" style={{ width: '16px', height: '16px', objectFit: 'contain', marginRight: '6px' }} />
                 <span>Resetuj napredak</span>
               </div>
               {/* Uskršnje jaje: Plavi ekran smrti */}
               <div className="xp-start-item" onClick={() => { setShowBSOD(true); setIsStartOpen(false); }}>
-                <span>🔥</span>
+                <img src="xp-fire.png" alt="" style={{ width: '16px', height: '16px', objectFit: 'contain', marginRight: '6px' }} />
                 <span>Crash System (BSOD)</span>
               </div>
             </div>
@@ -1792,11 +1800,11 @@ export const App: React.FC = () => {
           {/* Footer */}
           <div className="xp-start-footer">
             <div className="xp-footer-btn" onClick={resetAllProgress}>
-              <span className="xp-footer-icon">🔑</span>
+              <img src="xp-key.png" alt="" style={{ width: '16px', height: '16px', objectFit: 'contain', marginRight: '4px' }} />
               <span>Odjavi se (Log Off)</span>
             </div>
             <div className="xp-footer-btn" onClick={() => window.close()}>
-              <span className="xp-footer-icon">🔴</span>
+              <img src="xp-shutdown.png" alt="" style={{ width: '16px', height: '16px', objectFit: 'contain', marginRight: '4px' }} />
               <span>Ugasi (Turn Off)</span>
             </div>
           </div>
