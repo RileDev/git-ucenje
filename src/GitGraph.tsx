@@ -175,6 +175,53 @@ export const GitGraph: React.FC<GitGraphProps> = ({ state }) => {
 
   // Ukoliko nema commit-a, prikaži retro placeholder
   if (nodeKeys.length === 0) {
+    const isInitialized = Object.keys(branches).length > 0 || head.target !== '';
+    if (isInitialized) {
+      return (
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100%',
+          width: '100%',
+          color: '#333',
+          backgroundColor: '#f0f3f9',
+          padding: '20px',
+          textAlign: 'center',
+          fontFamily: '"Tahoma", sans-serif'
+        }}>
+          <div style={{
+            fontSize: '48px',
+            marginBottom: '15px',
+            filter: 'drop-shadow(1px 2px 2px rgba(0,0,0,0.15))'
+          }}>🌿</div>
+          <h4 style={{ fontWeight: 'bold', color: '#224488', marginBottom: '8px' }}>
+            Repozitorijum je uspešno inicijalizovan!
+          </h4>
+          <p style={{ fontSize: '12.5px', maxWidth: '320px', lineHeight: '1.4', color: '#555' }}>
+            Nalazite se na grani <strong style={{ color: '#245ddb' }}>master</strong>.<br/>
+            Kreirajte svoj prvi commit kako biste započeli crtanje vizuelnog grafa!
+          </p>
+          <div style={{
+            marginTop: '15px',
+            padding: '10px',
+            backgroundColor: '#ffffe1',
+            border: '1px solid #d4d0c8',
+            borderRadius: '4px',
+            fontSize: '11.5px',
+            color: '#000',
+            textAlign: 'left',
+            fontFamily: 'monospace',
+            boxShadow: '1px 1px 3px rgba(0,0,0,0.1)'
+          }}>
+            1. git add readme.txt<br/>
+            2. git commit -m "Moj prvi commit"
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div style={{
         display: 'flex',

@@ -211,6 +211,8 @@ body {
   flex-direction: column;
   position: relative;
   background-color: #ffffff;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* Windows XP Taskbar */
@@ -643,8 +645,12 @@ body {
 }
 
 .xp-gitko-char {
-  width: 65px;
-  height: 65px;
+  width: 90px;
+  height: 90px;
+  font-size: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   pointer-events: auto;
   cursor: pointer;
   filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.3));
