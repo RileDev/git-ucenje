@@ -781,6 +781,6 @@ Git će vas automatski prebaciti na commit na polovini tog opsega. Vi testirate 
     validate: () => {
       return true;
     },
-    expectedCommands: ["git bisect", "git bisect", "git bisect"]
+    expectedCommands: ["git bisect start", "git bisect bad", "git bisect good c0"]
   }
 ];

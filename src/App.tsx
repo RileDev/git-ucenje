@@ -617,7 +617,7 @@ export const App: React.FC = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (showLevelSuccessModal && e.key === 'Enter') {
         e.preventDefault();
-        handleNextLevel();
+        setShowLevelSuccessModal(false);
       }
     };
 
@@ -625,7 +625,7 @@ export const App: React.FC = () => {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [showLevelSuccessModal, handleNextLevel]);
+  }, [showLevelSuccessModal]);
 
   // Solitaire Bounce čestitka
   useEffect(() => {
@@ -1615,9 +1615,17 @@ export const App: React.FC = () => {
                   <p style={{ marginTop: '5px' }}>Uspešno ste rešili nivo: <strong>{currentLevel.title}</strong>!</p>
                 </div>
               </div>
-              <div className="xp-dialog-buttons">
-                <button className="xp-button xp-button-primary" onClick={handleNextLevel}>
-                  Pređi na sledeći nivo
+              <div className="xp-dialog-buttons" style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                <button className="xp-button" onClick={() => { setShowLevelSuccessModal(false); handleNextLevel(); }}>
+                  Novi nivo
+                </button>
+                <button 
+                  className="xp-button xp-button-primary" 
+                  onClick={() => setShowLevelSuccessModal(false)}
+                  style={{ fontWeight: 'bold' }}
+                  autoFocus
+                >
+                  Zatvori
                 </button>
               </div>
             </div>
