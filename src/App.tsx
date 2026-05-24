@@ -66,6 +66,57 @@ const playXpSuccess = () => {
   playTone(1046.50, now + 0.24, 0.7, 'triangle', 0.12); // C6
 };
 
+const parseMarkdownToHtml = (markdown: string): string => {
+  const lines = markdown.split('\n');
+  const processedLines = lines.map(line => {
+    const trimmed = line.trim();
+    
+    // H1, H2, H3
+    if (trimmed.startsWith('### ')) {
+      return `<h3 style="font-size: 14px; color: #002e80; margin: 15px 0 8px 0; font-weight: bold; border-bottom: 1px solid #d3e5fa; padding-bottom: 3px; font-family: 'Tahoma', sans-serif;">${trimmed.substring(4)}</h3>`;
+    }
+    if (trimmed.startsWith('## ')) {
+      return `<h2 style="font-size: 16px; color: #002e80; margin: 18px 0 10px 0; font-weight: bold; font-family: 'Tahoma', sans-serif;">${trimmed.substring(3)}</h2>`;
+    }
+    if (trimmed.startsWith('# ')) {
+      return `<h1 style="font-size: 18px; color: #002e80; margin: 20px 0 12px 0; font-weight: bold; font-family: 'Tahoma', sans-serif;">${trimmed.substring(2)}</h1>`;
+    }
+    
+    // Bullet points: * Item or - Item
+    const bulletMatch = trimmed.match(/^[\*\-]\s+(.*)/);
+    if (bulletMatch) {
+      return `<li style="margin-left: 20px; margin-bottom: 6px; list-style-type: disc; font-size: 13px; line-height: 1.5; color: #333;">${bulletMatch[1]}</li>`;
+    }
+    
+    // Numbered lists: 1. Item
+    const numberMatch = trimmed.match(/^\d+\.\s+(.*)/);
+    if (numberMatch) {
+      return `<li style="margin-left: 20px; margin-bottom: 6px; list-style-type: decimal; font-size: 13px; line-height: 1.5; color: #333;">${numberMatch[1]}</li>`;
+    }
+    
+    // Empty line
+    if (trimmed === '') {
+      return '<div style="height: 8px;"></div>';
+    }
+    
+    // Normal paragraph line
+    return `<p style="margin-bottom: 8px; line-height: 1.5; font-size: 13px; color: #333;">${line}</p>`;
+  });
+  
+  let html = processedLines.join('\n');
+  
+  // Replace inline bold **bold**
+  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong style="font-weight: bold; color: #002e80;">$1</strong>');
+  
+  // Replace inline italic *italic*
+  html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  
+  // Replace inline code `code`
+  html = html.replace(/`([^`]+)`/g, '<code style="background-color: #f0f3fd; border: 1px solid #d3e2f9; border-radius: 3px; padding: 1.5px 5px; font-family: monospace; font-size: 12px; color: #c7254e; font-weight: bold;">$1</code>');
+  
+  return html;
+};
+
 export const App: React.FC = () => {
   // Inicijalni nivo i dovršeni nivoi sačuvani u localStorage
   const [currentLevelIdx, setCurrentLevelIdx] = useState<number>(() => {
@@ -651,7 +702,7 @@ export const App: React.FC = () => {
 
                   <div 
                     style={{ fontSize: '13px', lineHeight: '1.6', margin: '15px 0' }}
-                    dangerouslySetInnerHTML={{ __html: currentLevel.description.replace(/\n/g, '<br/>') }}
+                    dangerouslySetInnerHTML={{ __html: parseMarkdownToHtml(currentLevel.description) }}
                   />
 
                   <div className="xp-level-box">
