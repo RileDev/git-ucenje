@@ -406,6 +406,15 @@ export const App: React.FC = () => {
     return saved !== 'false';
   });
   const [timeStr, setTimeStr] = useState('');
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Gitko pomoćnik
   const [gitkoMsg, setGitkoMsg] = useState<string>(
@@ -531,6 +540,7 @@ export const App: React.FC = () => {
 
   // Drag and Drop logika za prozore
   const handleTitleBarMouseDown = (id: string, e: React.MouseEvent) => {
+    if (isMobile) return;
     const win = windows.find(w => w.id === id);
     if (!win || win.isMaximized) return;
 
@@ -574,6 +584,7 @@ export const App: React.FC = () => {
 
   // Resize logika za prozore (instructions, terminal, graph)
   const handleResizeMouseDown = (id: string, e: React.MouseEvent) => {
+    if (isMobile) return;
     e.stopPropagation();
     e.preventDefault();
     const win = windows.find(w => w.id === id);
@@ -895,8 +906,10 @@ export const App: React.FC = () => {
     }
   };
 
+  const hasActiveWindow = windows.some(w => w.isOpen && !w.isMinimized);
+
   return (
-    <div className="xp-desktop" style={bgStyles[bgTheme]}>
+    <div className={`xp-desktop ${hasActiveWindow ? 'xp-desktop-has-active-window' : ''}`} style={bgStyles[bgTheme]}>
       {/* BSOD Plavi ekran smrti (Easter Egg) */}
       {showBSOD && (
         <div className="xp-bsod">
@@ -1056,8 +1069,9 @@ export const App: React.FC = () => {
 
               {/* 1. Terminal Window Content */}
               {win.id === 'terminal' && (() => {
-                const termScale = win.isMaximized ? 1.0 : (win.w / 520);
-                const termFontSize = Math.max(10, Math.min(26, Math.floor(14 * termScale)));
+                const actualWidth = isMobile ? window.innerWidth : (win.isMaximized ? window.innerWidth : win.w);
+                const termScale = isMobile ? (actualWidth / 420) : (win.isMaximized ? 1.2 : (win.w / 520));
+                const termFontSize = Math.max(isMobile ? 12.5 : 10, Math.min(26, Math.floor(14 * termScale)));
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                     {/* XP Toolbar */}
@@ -1140,11 +1154,12 @@ export const App: React.FC = () => {
 
               {/* 2. Instructions Window Content */}
               {win.id === 'instructions' && (() => {
-                const scale = win.isMaximized ? 1.0 : (win.w / 480);
-                const catFontSize = Math.max(9, Math.min(18, Math.floor(11 * scale)));
-                const titleFontSize = Math.max(14, Math.min(28, Math.floor(18 * scale)));
-                const descFontSize = Math.max(11, Math.min(22, Math.floor(13 * scale)));
-                const hintFontSize = Math.max(9, Math.min(18, Math.floor(11.5 * scale)));
+                const actualWidth = isMobile ? window.innerWidth : (win.isMaximized ? window.innerWidth : win.w);
+                const scale = isMobile ? (actualWidth / 400) : (win.isMaximized ? 1.2 : (win.w / 480));
+                const catFontSize = Math.max(isMobile ? 10.5 : 9, Math.min(18, Math.floor(11 * scale)));
+                const titleFontSize = Math.max(isMobile ? 16 : 14, Math.min(28, Math.floor(18 * scale)));
+                const descFontSize = Math.max(isMobile ? 13.5 : 11, Math.min(22, Math.floor(13 * scale)));
+                const hintFontSize = Math.max(isMobile ? 11.5 : 9, Math.min(18, Math.floor(11.5 * scale)));
                 return (
                   <div className="xp-level-panel" style={{ height: '100%', overflowY: 'auto' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
@@ -1198,7 +1213,8 @@ export const App: React.FC = () => {
 
               {/* 3. Git Graph Window Content */}
               {win.id === 'graph' && (() => {
-                const graphScale = win.isMaximized ? 1.0 : (win.w / 520);
+                const actualWidth = isMobile ? window.innerWidth : (win.isMaximized ? window.innerWidth : win.w);
+                const graphScale = isMobile ? (actualWidth / 420) : (win.isMaximized ? 1.2 : (win.w / 520));
                 const graphFontMultiplier = Math.max(0.7, Math.min(2.0, graphScale));
                 return (
                   <GitGraph state={repoState} fontSizeMultiplier={graphFontMultiplier} />

@@ -822,3 +822,255 @@ body {
     page-break-inside: avoid;
   }
 }
+
+/* Mobile Responsive Optimizations (< 768px) */
+@media (max-width: 768px) {
+  /* Desktop Layout */
+  .xp-desktop {
+    height: calc(100dvh - 40px) !important;
+    padding: 8px !important;
+    overflow: hidden !important;
+  }
+
+  /* Desktop Icon Grid */
+  .xp-desktop-grid {
+    top: 10px !important;
+    left: 10px !important;
+    bottom: 50px !important;
+    width: auto !important;
+    height: auto !important;
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)) !important;
+    flex-direction: row !important;
+    gap: 12px !important;
+    right: 10px !important;
+  }
+
+  .xp-desktop-icon {
+    width: auto !important;
+    height: 75px !important;
+    padding: 4px !important;
+  }
+
+  .xp-desktop-icon-img {
+    width: 28px !important;
+    height: 28px !important;
+    margin-bottom: 4px !important;
+  }
+
+  .xp-desktop-icon-text {
+    font-size: 10px !important;
+    text-shadow: 1px 1px 1px #000 !important;
+  }
+
+  /* Full screen active windows on mobile */
+  .xp-window {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: calc(100dvh - 40px) !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    z-index: 20 !important;
+  }
+
+  /* Active window takes higher priority */
+  .xp-window.active {
+    display: flex !important;
+    z-index: 30 !important;
+  }
+
+  /* Hide inactive windows on mobile so they don't overlay each other */
+  .xp-window:not(.active) {
+    display: none !important;
+  }
+
+  /* Title bar adjustments on mobile */
+  .xp-window-titlebar {
+    height: 34px !important; /* Slightly larger click area for fingers */
+    padding: 0 8px !important;
+  }
+
+  .xp-window-title {
+    font-size: 12px !important;
+  }
+
+  .xp-window-controls {
+    gap: 4px !important;
+  }
+
+  .xp-control-btn {
+    width: 20px !important;
+    height: 20px !important;
+  }
+
+  /* Hide maximize buttons on mobile since it's already full screen */
+  .xp-btn-maximize {
+    display: none !important;
+  }
+
+  /* Taskbar mobile styling */
+  .xp-taskbar {
+    height: 40px !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    z-index: 100 !important;
+  }
+
+  .xp-start-btn {
+    padding: 0 10px 0 8px !important;
+    font-size: 13px !important;
+  }
+
+  .xp-start-btn img {
+    width: 14px !important;
+    height: 14px !important;
+  }
+
+  .xp-taskbar-tasks {
+    padding: 0 4px !important;
+    gap: 4px !important;
+  }
+
+  .xp-taskbar-item {
+    min-width: 34px !important;
+    max-width: 80px !important;
+    height: 30px !important;
+    padding: 0 4px !important;
+    font-size: 9px !important;
+    gap: 4px !important;
+    justify-content: center !important;
+  }
+
+  .xp-taskbar-item img {
+    margin-right: 0 !important;
+  }
+
+  .xp-taskbar-text {
+    display: none !important; /* Hide text on small screens so they all fit */
+  }
+
+  @media (min-width: 480px) {
+    .xp-taskbar-item {
+      max-width: 120px !important;
+    }
+    .xp-taskbar-text {
+      display: inline !important;
+    }
+  }
+
+  .xp-systray {
+    padding: 0 6px !important;
+    font-size: 10px !important;
+    gap: 4px !important;
+  }
+
+  /* Start menu adjustments on mobile */
+  .xp-start-menu {
+    position: fixed !important;
+    bottom: 40px !important;
+    left: 0 !important;
+    width: 280px !important;
+    height: auto !important;
+    max-height: calc(100dvh - 50px) !important;
+    z-index: 110 !important;
+    border: 2px solid var(--xp-window-border, #245ddb) !important;
+  }
+
+  .xp-start-header {
+    height: 42px !important;
+    padding: 0 10px !important;
+    font-size: 11px !important;
+    gap: 8px !important;
+  }
+
+  .xp-start-avatar {
+    width: 26px !important;
+    height: 26px !important;
+    font-size: 14px !important;
+    border-width: 1px !important;
+  }
+
+  .xp-start-left {
+    padding: 6px 3px !important;
+    gap: 2px !important;
+    width: 52% !important;
+  }
+
+  .xp-start-right {
+    padding: 6px 4px !important;
+    gap: 3px !important;
+    width: 48% !important;
+  }
+
+  .xp-start-item {
+    padding: 4px 6px !important;
+    gap: 6px !important;
+    font-size: 10px !important;
+  }
+
+  .xp-start-item-icon {
+    width: 16px !important;
+    height: 16px !important;
+  }
+
+  .xp-start-item-subtext {
+    font-size: 8px !important;
+  }
+
+  .xp-start-footer {
+    height: 36px !important;
+    padding: 0 10px !important;
+    gap: 8px !important;
+  }
+
+  .xp-footer-btn {
+    font-size: 10px !important;
+    padding: 2px 6px !important;
+    gap: 4px !important;
+  }
+
+  .xp-footer-icon {
+    width: 14px !important;
+    height: 14px !important;
+  }
+
+  /* Padding and Margin optimizations inside active Windows on Mobile */
+  .xp-level-panel {
+    padding: 12px !important;
+  }
+
+  .xp-level-box {
+    padding: 8px 10px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .xp-terminal {
+    padding: 8px !important;
+  }
+
+  /* Clippy Style Assistant - Hide floating helper when workspace is busy */
+  .xp-desktop-has-active-window .xp-gitko-container {
+    display: none !important;
+  }
+
+  .xp-gitko-container {
+    right: 10px !important;
+    bottom: 50px !important;
+  }
+
+  .xp-gitko-bubble {
+    max-width: 170px !important;
+    font-size: 10px !important;
+    padding: 6px 10px !important;
+  }
+
+  .xp-gitko-char {
+    width: 50px !important;
+    height: 50px !important;
+  }
+}
