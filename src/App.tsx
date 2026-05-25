@@ -429,6 +429,15 @@ export const App: React.FC = () => {
   );
   const [showLevelSuccessModal, setShowLevelSuccessModal] = useState(false);
 
+  const [lastTaskMsg, setLastTaskMsg] = useState<string>(
+    'Zdravo! Ja sam Gitko. Pokreni učenje klikom na \"Pokreni program\" u Start meniju ili osmotri prečice na radnoj površini!'
+  );
+
+  const setTaskMsg = (msg: string) => {
+    setGitkoMsg(msg);
+    setLastTaskMsg(msg);
+  };
+
   // Auto-sakrivanje Gitko oblačića nakon 3 sekunde neaktivnosti
   useEffect(() => {
     if (!gitkoMsg) return;
@@ -493,7 +502,7 @@ export const App: React.FC = () => {
     ]);
     setTerminalInput('');
     setLevelCommandsRun([]);
-    setGitkoMsg(`Nivo ${currentLevel.id}: ${currentLevel.title}. Pročitaj uputstvo levo i unesi prvu komandu u terminal!`);
+    setTaskMsg(`Nivo ${currentLevel.id}: ${currentLevel.title}. Pročitaj uputstvo levo i unesi prvu komandu u terminal!`);
     localStorage.setItem('luna_git_current_level', currentLevelIdx.toString());
   }, [currentLevelIdx]);
 
@@ -672,7 +681,7 @@ export const App: React.FC = () => {
 
     if (result.error) {
       if (soundEnabled) playXpError();
-      setGitkoMsg(`Oops! Komanda '${cmd}' je prijavila grešku. Pogledaj ispis u terminalu ili klikni na 'Pomoć' na radnoj površini!`);
+      setTaskMsg(`Oops! Komanda '${cmd}' je prijavila grešku. Pogledaj ispis u terminalu ili klikni na 'Pomoć' na radnoj površini!`);
       currentHist[currentHist.length - 1].output = result.output;
       currentHist[currentHist.length - 1].isError = true;
       setTerminalHistory(currentHist);
@@ -723,7 +732,7 @@ export const App: React.FC = () => {
 
       if (solved && allExpectedRun) {
         if (soundEnabled) playXpSuccess();
-        setGitkoMsg('Fenomenalno! Uspešno si rešio sve zadatke na ovom nivou! Pogledaj sledeći korak.');
+        setTaskMsg('Fenomenalno! Uspešno si rešio sve zadatke na ovom nivou! Pogledaj sledeći korak.');
 
         // Dodaj u rešene
         const nextCompleted = Array.from(new Set([...completedLevels, currentLevel.id]));
@@ -741,9 +750,9 @@ export const App: React.FC = () => {
           }
           return !updatedCommandsRun.includes(cleaned);
         });
-        setGitkoMsg(`Skoro je gotovo! Uspešno ste podesili repozitorijum, ali da biste zaista savladali nivo, morate isprobati i preostale komande u uputstvu: ${missingCmds.join(', ')}!`);
+        setTaskMsg(`Skoro je gotovo! Uspešno ste podesili repozitorijum, ali da biste zaista savladali nivo, morate isprobati i preostale komande u uputstvu: ${missingCmds.join(', ')}!`);
       } else {
-        setGitkoMsg('Dobar korak! Nastavi dalje da pratiš uputstva kako bi rešio nivo.');
+        setTaskMsg('Dobar korak! Nastavi dalje da pratiš uputstva kako bi rešio nivo.');
       }
     }
 
@@ -758,7 +767,7 @@ export const App: React.FC = () => {
     } else {
       // Svi nivoi su uspešno završeni!
       setShowSolitaire(true);
-      setGitkoMsg('ČESTITAMO! Uspešno si prošao kompletnu obuku za Git na srpskoj latinici u Luna Git platformi!');
+      setTaskMsg('ČESTITAMO! Uspešno si prošao kompletnu obuku za Git na srpskoj latinici u Luna Git platformi!');
     }
   };
 
@@ -1885,12 +1894,25 @@ export const App: React.FC = () => {
         <div
           className="xp-gitko-char"
           onClick={() => {
-            const msgs = {
+            const welcomeMsgs = {
               doge: "Ja sam Gitko Doge! Mnogo git, vrlo grana, vau! Klikni na ikone na radnoj površini da otvoriš Git Graf ili Uputstvo.",
               snake: "Snake ovde. Pukovniče, ušao sam u Git repozitorijum. Pazi na konflikte, over.",
               bonzi: "Zdravo! Ja sam tvoj najbolji ljubičasti drugar BonziBuddy! Hoćeš li da ti ispričam vic o programerima? 🍇"
             };
-            setGitkoMsg(msgs[assistantChar]);
+            const currentWelcome = welcomeMsgs[assistantChar];
+
+            if (!gitkoMsg) {
+              // Ako je mehur sakriven, na prvi klik uvek prikaži poruku dobrodošlice
+              setGitkoMsg(currentWelcome);
+            } else {
+              // Ako je mehur vidljiv, menjaj naizmenično između poruke dobrodošlice i poslednjeg zadatka/akcije
+              if (gitkoMsg === currentWelcome) {
+                setGitkoMsg(lastTaskMsg);
+              } else {
+                setGitkoMsg(currentWelcome);
+              }
+            }
+
             if (soundEnabled) playTone(440, 0, 0.15, 'sine');
           }}
         >
