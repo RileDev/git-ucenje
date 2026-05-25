@@ -429,6 +429,15 @@ export const App: React.FC = () => {
   );
   const [showLevelSuccessModal, setShowLevelSuccessModal] = useState(false);
 
+  // Auto-sakrivanje Gitko oblačića nakon 3 sekunde neaktivnosti
+  useEffect(() => {
+    if (!gitkoMsg) return;
+    const timer = setTimeout(() => {
+      setGitkoMsg('');
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [gitkoMsg]);
+
   // Refovi za drag i scroll
   const terminalBottomRef = useRef<HTMLDivElement>(null);
   const dragInfo = useRef<{ winId: string; startX: number; startY: number; winX: number; winY: number } | null>(null);
@@ -1093,7 +1102,7 @@ export const App: React.FC = () => {
               {win.id === 'terminal' && (() => {
                 const actualWidth = isMobile ? window.innerWidth : (win.isMaximized ? window.innerWidth : win.w);
                 const termScale = isMobile ? (actualWidth / 420) : (actualWidth / 520);
-                const termFontSize = Math.max(isMobile ? 12.5 : 10, Math.min(20, Math.floor(14 * termScale)));
+                const termFontSize = Math.max(isMobile ? 14.5 : 10, Math.min(20, Math.floor(14 * termScale)));
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                     {/* XP Toolbar */}
@@ -1166,6 +1175,9 @@ export const App: React.FC = () => {
                           value={terminalInput}
                           onChange={(e) => setTerminalInput(e.target.value)}
                           autoComplete="off"
+                          autoCapitalize="none"
+                          autoCorrect="off"
+                          spellCheck={false}
                           autoFocus
                         />
                       </form>
@@ -1178,10 +1190,10 @@ export const App: React.FC = () => {
               {win.id === 'instructions' && (() => {
                 const actualWidth = isMobile ? window.innerWidth : (win.isMaximized ? window.innerWidth : win.w);
                 const scale = isMobile ? (actualWidth / 400) : (actualWidth / 480);
-                const catFontSize = Math.max(isMobile ? 10.5 : 9, Math.min(14, Math.floor(11 * scale)));
-                const titleFontSize = Math.max(isMobile ? 16 : 14, Math.min(24, Math.floor(18 * scale)));
-                const descFontSize = Math.max(isMobile ? 13.5 : 11, Math.min(17, Math.floor(13 * scale)));
-                const hintFontSize = Math.max(isMobile ? 11.5 : 9, Math.min(14, Math.floor(11.5 * scale)));
+                const catFontSize = Math.max(isMobile ? 12.5 : 9, Math.min(14, Math.floor(11 * scale)));
+                const titleFontSize = Math.max(isMobile ? 18 : 14, Math.min(24, Math.floor(18 * scale)));
+                const descFontSize = Math.max(isMobile ? 15.5 : 11, Math.min(17, Math.floor(13 * scale)));
+                const hintFontSize = Math.max(isMobile ? 13.5 : 9, Math.min(14, Math.floor(11.5 * scale)));
                 return (
                   <div className="xp-level-panel" style={{ height: '100%', overflowY: 'auto' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>

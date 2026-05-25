@@ -990,7 +990,7 @@ body {
 
   .xp-systray {
     padding: 0 6px !important;
-    font-size: 10px !important;
+    font-size: 12px !important;
     gap: 4px !important;
   }
 
@@ -1009,7 +1009,7 @@ body {
   .xp-start-header {
     height: 42px !important;
     padding: 0 10px !important;
-    font-size: 11px !important;
+    font-size: 13px !important;
     gap: 8px !important;
   }
 
@@ -1035,7 +1035,7 @@ body {
   .xp-start-item {
     padding: 4px 6px !important;
     gap: 6px !important;
-    font-size: 10px !important;
+    font-size: 12px !important;
   }
 
   .xp-start-item-icon {
@@ -1044,7 +1044,7 @@ body {
   }
 
   .xp-start-item-subtext {
-    font-size: 8px !important;
+    font-size: 10px !important;
   }
 
   .xp-start-footer {
@@ -1054,7 +1054,7 @@ body {
   }
 
   .xp-footer-btn {
-    font-size: 10px !important;
+    font-size: 12px !important;
     padding: 2px 6px !important;
     gap: 4px !important;
   }
@@ -1078,11 +1078,6 @@ body {
     padding: 8px !important;
   }
 
-  /* Clippy Style Assistant - Hide floating helper when workspace is busy */
-  .xp-desktop-has-active-window .xp-gitko-container {
-    display: none !important;
-  }
-
   .xp-gitko-container {
     right: 10px !important;
     bottom: 50px !important;
@@ -1090,7 +1085,7 @@ body {
 
   .xp-gitko-bubble {
     max-width: 170px !important;
-    font-size: 10px !important;
+    font-size: 12px !important;
     padding: 6px 10px !important;
   }
 
