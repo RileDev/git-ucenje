@@ -135,12 +135,13 @@ body {
   text-shadow: 1px 1px 2px var(--xp-blue-dark);
   cursor: move;
   border-radius: 6px 6px 0 0;
-  border-top: 1px solid #7ea7fc;
+  border-top: 1px solid var(--xp-titlebar-border-top, #7ea7fc);
   box-shadow: inset 0 2px 2px rgba(255, 255, 255, 0.3);
 }
 
 .xp-window:not(.active) .xp-window-titlebar {
-  background: linear-gradient(to right, #7ea6e7 0%, #9cbef3 50%, #7ea6e7 100%);
+  background: var(--xp-title-gradient-inactive, linear-gradient(to right, #7ea6e7 0%, #9cbef3 50%, #7ea6e7 100%));
+  border-top: 1px solid var(--xp-titlebar-border-top-inactive, #b5d1fa);
   text-shadow: none;
 }
 
@@ -163,46 +164,46 @@ body {
 .xp-control-btn {
   width: 21px;
   height: 21px;
-  border: 1px solid #ffffff;
-  border-radius: 3px;
+  border: var(--xp-btn-border, 1px solid #ffffff);
+  border-radius: var(--xp-btn-border-radius, 3px);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 800;
   font-size: 11px;
-  color: #ffffff;
+  color: var(--xp-btn-text-color, #ffffff);
   cursor: pointer;
-  box-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+  box-shadow: var(--xp-btn-box-shadow, 1px 1px 2px rgba(0,0,0,0.5));
 }
 
 .xp-btn-minimize {
-  background: linear-gradient(to bottom, #8eaaf4 0%, #3e68ce 100%);
+  background: var(--xp-btn-minmax-bg, linear-gradient(to bottom, #8eaaf4 0%, #3e68ce 100%));
 }
 .xp-btn-minimize::after {
   content: "";
   width: 8px;
   height: 2px;
-  background-color: white;
+  background-color: var(--xp-btn-text-color, white);
   margin-top: 6px;
 }
 
 .xp-btn-maximize {
-  background: linear-gradient(to bottom, #8eaaf4 0%, #3e68ce 100%);
+  background: var(--xp-btn-minmax-bg, linear-gradient(to bottom, #8eaaf4 0%, #3e68ce 100%));
 }
 .xp-btn-maximize::after {
   content: "";
   width: 8px;
   height: 6px;
-  border: 2px solid white;
-  border-top: 3px solid white;
+  border: 2px solid var(--xp-btn-text-color, white);
+  border-top: 3px solid var(--xp-btn-text-color, white);
 }
 
 .xp-btn-close {
-  background: linear-gradient(to bottom, #f39777 0%, #c43c16 100%);
+  background: var(--xp-btn-close-bg, linear-gradient(to bottom, #f39777 0%, #c43c16 100%));
   font-size: 12px;
 }
 .xp-btn-close:hover {
-  background: linear-gradient(to bottom, #ff7a4d 0%, #e61900 100%);
+  background: var(--xp-btn-close-hover, linear-gradient(to bottom, #ff7a4d 0%, #e61900 100%));
 }
 
 /* Window Content */
@@ -227,7 +228,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-top: 1px solid #7ea7fc;
+  border-top: 1px solid var(--xp-taskbar-border-top, #7ea7fc);
   box-shadow: inset 0 2px 2px rgba(255, 255, 255, 0.4);
   z-index: 100;
   padding: 0 10px 0 0;
@@ -248,6 +249,8 @@ body {
   text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
   border-top-right-radius: 15px;
   border-bottom-right-radius: 15px;
+  border-bottom-left-radius: 0px;
+  border-top-left-radius: 0px;
   box-shadow: 0 0 15px rgba(60, 157, 60, 0.4), inset -2px -2px 5px rgba(0,0,0,0.5), inset 2px 2px 5px rgba(255,255,255,0.6);
   cursor: pointer;
   transition: all 0.1s ease;
@@ -280,11 +283,11 @@ body {
   height: 28px;
   min-width: 110px;
   max-width: 160px;
-  background: linear-gradient(to bottom, #3c82eb 0%, #1f50a8 100%);
-  border: 1px solid #002e80;
-  border-radius: 3px;
-  box-shadow: inset 0 1px 2px rgba(255,255,255,0.5);
-  color: #ffffff;
+  background: var(--xp-taskbar-item-bg, linear-gradient(to bottom, #3c82eb 0%, #1f50a8 100%));
+  border: 1px solid var(--xp-taskbar-item-border, #002e80);
+  border-radius: var(--xp-taskbar-item-border-radius, 3px);
+  box-shadow: var(--xp-taskbar-item-box-shadow, inset 0 1px 2px rgba(255,255,255,0.5));
+  color: var(--xp-taskbar-item-text-color, #ffffff);
   font-size: 11px;
   font-weight: bold;
   padding: 0 8px;
@@ -292,17 +295,18 @@ body {
   align-items: center;
   gap: 6px;
   cursor: pointer;
-  text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
+  text-shadow: var(--xp-taskbar-item-text-shadow, 1px 1px 1px rgba(0,0,0,0.5));
 }
 
 .xp-taskbar-item:hover {
-  background: linear-gradient(to bottom, #5d9efa 0%, #2f6ecf 100%);
+  background: var(--xp-taskbar-item-bg-hover, linear-gradient(to bottom, #5d9efa 0%, #2f6ecf 100%));
+  border-color: var(--xp-taskbar-item-border-hover, var(--xp-taskbar-item-border, #002e80));
 }
 
 .xp-taskbar-item.active {
-  background: linear-gradient(to bottom, #16387a 0%, #2b61bd 100%);
-  box-shadow: inset 2px 2px 5px rgba(0,0,0,0.8);
-  border: 1px solid #102450;
+  background: var(--xp-taskbar-item-bg-active, linear-gradient(to bottom, #16387a 0%, #2b61bd 100%));
+  box-shadow: var(--xp-taskbar-item-box-shadow-active, inset 2px 2px 5px rgba(0,0,0,0.8));
+  border: 1px solid var(--xp-taskbar-item-border-active, #102450);
 }
 
 .xp-taskbar-icon {
@@ -737,15 +741,15 @@ body {
 }
 
 .xp-button-primary {
-  background: linear-gradient(to bottom, #4d8df6 0%, #1e52cf 100%);
-  border-color: #002e80;
+  background: var(--xp-btn-primary-bg, linear-gradient(to bottom, #4d8df6 0%, #1e52cf 100%));
+  border-color: var(--xp-btn-primary-border, #002e80);
   color: #ffffff;
   box-shadow: inset 1px 1px 0px rgba(255,255,255,0.4);
 }
 
 .xp-button-primary:hover {
-  background: linear-gradient(to bottom, #6d9ff7 0%, #2f65df 100%);
-  border-color: #001f59;
+  background: var(--xp-btn-primary-bg-hover, linear-gradient(to bottom, #6d9ff7 0%, #2f65df 100%));
+  border-color: var(--xp-btn-primary-border-hover, #001f59);
 }
 
 /* Retro dialog box styling */
