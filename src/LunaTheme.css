@@ -716,6 +716,31 @@ body {
   background-color: #cccccc;
 }
 
+/* Mobile responsive adjustments for BSOD Easter Egg */
+@media (max-width: 768px) {
+  .xp-bsod {
+    padding: 20px 15px !important;
+    gap: 10px !important;
+    font-size: 11px !important;
+    line-height: 1.4 !important;
+    overflow-y: auto !important; /* Enable scrolling on smaller viewports */
+  }
+  .xp-bsod-header {
+    font-size: 13px !important;
+    margin-bottom: 12px !important;
+    align-self: center !important;
+  }
+  .xp-bsod p {
+    margin: 0 !important;
+  }
+  .xp-bsod-btn {
+    margin-top: 15px !important;
+    padding: 6px 12px !important;
+    font-size: 11px !important;
+    align-self: center !important; /* Center the restart button for clean ergonomics */
+  }
+}
+
 /* WinXP style buttons and alerts */
 .xp-button {
   background: linear-gradient(to bottom, #fcfcfc 0%, #e0dfdb 100%);

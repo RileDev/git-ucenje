@@ -401,6 +401,13 @@ export const App: React.FC = () => {
   const [isStartOpen, setIsStartOpen] = useState(false);
   const [showBSOD, setShowBSOD] = useState(false);
   const [showSolitaire, setShowSolitaire] = useState(false);
+  const [userName, setUserName] = useState(() => {
+    return localStorage.getItem('xp_username') || 'Luka';
+  });
+  const [tempUserName, setTempUserName] = useState(() => {
+    return localStorage.getItem('xp_username') || 'Luka';
+  });
+  const [showSaveFeedback, setShowSaveFeedback] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(() => {
     const saved = localStorage.getItem('luna_git_sound');
     return saved !== 'false';
@@ -906,6 +913,21 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleSaveUserName = () => {
+    const finalName = tempUserName.trim() || 'Luka';
+    setUserName(finalName);
+    setTempUserName(finalName);
+    localStorage.setItem('xp_username', finalName);
+    setShowSaveFeedback(true);
+    if (soundEnabled) {
+      playTone(880, 0, 0.1, 'sine', 0.12);
+      setTimeout(() => playTone(1100, 0, 0.15, 'sine', 0.12), 80);
+    }
+    setTimeout(() => {
+      setShowSaveFeedback(false);
+    }, 2500);
+  };
+
   const hasActiveWindow = windows.some(w => w.isOpen && !w.isMinimized);
 
   return (
@@ -1335,6 +1357,70 @@ export const App: React.FC = () => {
                         {soundEnabled ? 'Uključeni retro zvukovi' : 'Zvukovi su isključeni'}
                       </button>
                     </div>
+                  </div>
+
+                  <div>
+                    <h4 style={{ fontWeight: 'bold', marginBottom: '8px', color: '#333', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ fontSize: '16px', marginRight: '4px' }}>👤</span>
+                      Korisničko ime (Start Menu)
+                    </h4>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <input
+                        type="text"
+                        className="xp-terminal-input"
+                        value={tempUserName}
+                        onChange={(e) => setTempUserName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleSaveUserName();
+                          }
+                        }}
+                        style={{
+                          flex: 1,
+                          backgroundColor: '#fff',
+                          color: '#000',
+                          border: '1px solid #7ea7fc',
+                          padding: '6px 8px',
+                          fontSize: '11px',
+                          fontFamily: 'Tahoma, Arial, sans-serif',
+                          boxShadow: 'inset 1px 1px 2px rgba(0,0,0,0.1)',
+                          boxSizing: 'border-box',
+                          height: '26px'
+                        }}
+                        placeholder="Promeni ime ovde..."
+                      />
+                      <button
+                        className="xp-button xp-button-primary"
+                        onClick={handleSaveUserName}
+                        style={{
+                          padding: '2px 12px',
+                          fontSize: '11px',
+                          height: '26px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Sačuvaj
+                      </button>
+                    </div>
+                    {showSaveFeedback && (
+                      <div 
+                        style={{ 
+                          marginTop: '6px', 
+                          fontSize: '11px', 
+                          color: '#008000', 
+                          fontWeight: 'bold',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          animation: 'fadeIn 0.2s ease-in-out'
+                        }}
+                      >
+                        <span>✓</span> Ime uspešno sačuvano!
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -1920,7 +2006,7 @@ export const App: React.FC = () => {
           <div className="xp-start-header">
             <div className="xp-start-avatar">👤</div>
             <div>
-              <div>Luka</div>
+              <div>{userName}</div>
               <div style={{ fontSize: '9px', fontWeight: 'normal', textShadow: 'none', color: '#c3d5ff' }}>Administrator</div>
             </div>
           </div>
