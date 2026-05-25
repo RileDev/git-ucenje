@@ -416,6 +416,7 @@ export const App: React.FC = () => {
   // Refovi za drag i scroll
   const terminalBottomRef = useRef<HTMLDivElement>(null);
   const dragInfo = useRef<{ winId: string; startX: number; startY: number; winX: number; winY: number } | null>(null);
+  const resizeInfo = useRef<{ winId: string; startWidth: number; startHeight: number; startX: number; startY: number } | null>(null);
   const solitaireCanvasRef = useRef<HTMLCanvasElement>(null);
 
   // Sat u taskbaru
@@ -569,6 +570,65 @@ export const App: React.FC = () => {
     dragInfo.current = null;
     document.removeEventListener('mousemove', handleGlobalMouseMove);
     document.removeEventListener('mouseup', handleGlobalMouseUp);
+  };
+
+  // Resize logika za prozore (instructions, terminal, graph)
+  const handleResizeMouseDown = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const win = windows.find(w => w.id === id);
+    if (!win || win.isMaximized) return;
+
+    focusWindow(id);
+    resizeInfo.current = {
+      winId: id,
+      startWidth: win.w,
+      startHeight: win.h,
+      startX: e.clientX,
+      startY: e.clientY
+    };
+
+    document.addEventListener('mousemove', handleGlobalResizeMouseMove);
+    document.addEventListener('mouseup', handleGlobalResizeMouseUp);
+  };
+
+  const handleGlobalResizeMouseMove = (e: MouseEvent) => {
+    if (!resizeInfo.current) return;
+    const info = resizeInfo.current;
+    const dx = e.clientX - info.startX;
+    const dy = e.clientY - info.startY;
+
+    // Razumne minimalne dimenzije (trenutne vrednosti kao minimalne)
+    let minW = 300;
+    let minH = 200;
+    if (info.winId === 'instructions') {
+      minW = 480;
+      minH = 520;
+    } else if (info.winId === 'terminal') {
+      minW = 520;
+      minH = 250;
+    } else if (info.winId === 'graph') {
+      minW = 520;
+      minH = 250;
+    }
+
+    setWindows(prev =>
+      prev.map(w =>
+        w.id === info.winId
+          ? {
+            ...w,
+            w: Math.max(minW, info.startWidth + dx),
+            h: Math.max(minH, info.startHeight + dy)
+          }
+          : w
+      )
+    );
+  };
+
+  const handleGlobalResizeMouseUp = () => {
+    resizeInfo.current = null;
+    document.removeEventListener('mousemove', handleGlobalResizeMouseMove);
+    document.removeEventListener('mouseup', handleGlobalResizeMouseUp);
   };
 
   // Izvršavanje unete git komande
@@ -995,138 +1055,155 @@ export const App: React.FC = () => {
             <div className="xp-window-content">
 
               {/* 1. Terminal Window Content */}
-              {win.id === 'terminal' && (
-                <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                  {/* XP Toolbar */}
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '4px 6px',
-                    backgroundColor: 'var(--xp-window-bg, #ece9d8)',
-                    borderBottom: '1px solid var(--xp-window-border, #7ea7fc)',
-                    fontFamily: 'Tahoma, Arial, sans-serif',
-                    fontSize: '11px',
-                    color: '#000000',
-                    boxSizing: 'border-box'
-                  }}>
-                    <button
-                      className="xp-button"
-                      onClick={(e) => { e.stopPropagation(); resetCurrentLevel(); }}
-                      style={{
-                        padding: '2px 8px',
-                        fontSize: '11px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        fontWeight: 'normal',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      🔄 Resetuj nivo
-                    </button>
-                    <button
-                      className="xp-button"
-                      onClick={(e) => { e.stopPropagation(); setGitkoMsg(currentLevel.hint); if (soundEnabled) playTone(440, 0, 0.1, 'sine'); }}
-                      style={{
-                        padding: '2px 8px',
-                        fontSize: '11px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        fontWeight: 'normal',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      💡 Pomoć
-                    </button>
-                  </div>
-                  <div className="xp-terminal" style={{ flex: 1 }} onClick={() => document.getElementById('term-input-field')?.focus()}>
-                  <div className="xp-terminal-history">
-                    {terminalHistory.map((h, i) => (
-                      <div key={i}>
-                        {h.input && (
-                          <div className="xp-terminal-input-row">
-                            <span className="xp-terminal-prompt">luka@luna-xp:~$</span>
-                            <span>{h.input}</span>
+              {win.id === 'terminal' && (() => {
+                const termScale = win.isMaximized ? 1.0 : (win.w / 520);
+                const termFontSize = Math.max(10, Math.min(26, Math.floor(14 * termScale)));
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                    {/* XP Toolbar */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '4px 6px',
+                      backgroundColor: 'var(--xp-window-bg, #ece9d8)',
+                      borderBottom: '1px solid var(--xp-window-border, #7ea7fc)',
+                      fontFamily: 'Tahoma, Arial, sans-serif',
+                      fontSize: '11px',
+                      color: '#000000',
+                      boxSizing: 'border-box'
+                    }}>
+                      <button
+                        className="xp-button"
+                        onClick={(e) => { e.stopPropagation(); resetCurrentLevel(); }}
+                        style={{
+                          padding: '2px 8px',
+                          fontSize: '11px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontWeight: 'normal',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        🔄 Resetuj nivo
+                      </button>
+                      <button
+                        className="xp-button"
+                        onClick={(e) => { e.stopPropagation(); setGitkoMsg(currentLevel.hint); if (soundEnabled) playTone(440, 0, 0.1, 'sine'); }}
+                        style={{
+                          padding: '2px 8px',
+                          fontSize: '11px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontWeight: 'normal',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        💡 Pomoć
+                      </button>
+                    </div>
+                    <div className="xp-terminal" style={{ flex: 1, fontSize: `${termFontSize}px` }} onClick={() => document.getElementById('term-input-field')?.focus()}>
+                      <div className="xp-terminal-history">
+                        {terminalHistory.map((h, i) => (
+                          <div key={i}>
+                            {h.input && (
+                              <div className="xp-terminal-input-row">
+                                <span className="xp-terminal-prompt">luka@luna-xp:~$</span>
+                                <span>{h.input}</span>
+                              </div>
+                            )}
+                            <div style={{ color: h.isError ? '#f87171' : '#10b981', whiteSpace: 'pre-wrap', marginTop: '3px' }}>
+                              {h.output}
+                            </div>
                           </div>
-                        )}
-                        <div style={{ color: h.isError ? '#f87171' : '#10b981', whiteSpace: 'pre-wrap', marginTop: '3px' }}>
-                          {h.output}
-                        </div>
+                        ))}
+                        <div ref={terminalBottomRef} />
                       </div>
-                    ))}
-                    <div ref={terminalBottomRef} />
-                  </div>
-                  <form onSubmit={handleTerminalSubmit} className="xp-terminal-input-row">
-                    <span className="xp-terminal-prompt">luka@luna-xp:~$</span>
-                    <input
-                      id="term-input-field"
-                      type="text"
-                      className="xp-terminal-input"
-                      value={terminalInput}
-                      onChange={(e) => setTerminalInput(e.target.value)}
-                      autoComplete="off"
-                      autoFocus
-                    />
-                  </form>
-                </div>
-              </div>
-            )}
-
-              {/* 2. Instructions Window Content */}
-              {win.id === 'instructions' && (
-                <div className="xp-level-panel">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                    <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#666' }}>KATEGORIJA: {currentLevel.category}</span>
-                    <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#245ddb' }}>NIVO {currentLevel.id} od {levels.length}</span>
-                  </div>
-
-                  <h2 style={{ fontSize: '18px', color: '#002e80', borderBottom: '2px solid #3b68c3', paddingBottom: '5px' }}>
-                    {currentLevel.title}
-                  </h2>
-
-                  <div
-                    style={{ fontSize: '13px', lineHeight: '1.6', margin: '15px 0' }}
-                    dangerouslySetInnerHTML={{ __html: parseMarkdownToHtml(currentLevel.description) }}
-                  />
-
-                  <div className="xp-level-box">
-                    <strong>💡 Pomoć i Savet:</strong>
-                    <div style={{ marginTop: '5px', whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
-                      {currentLevel.hint}
+                      <form onSubmit={handleTerminalSubmit} className="xp-terminal-input-row">
+                        <span className="xp-terminal-prompt">luka@luna-xp:~$</span>
+                        <input
+                          id="term-input-field"
+                          type="text"
+                          className="xp-terminal-input"
+                          value={terminalInput}
+                          onChange={(e) => setTerminalInput(e.target.value)}
+                          autoComplete="off"
+                          autoFocus
+                        />
+                      </form>
                     </div>
                   </div>
+                );
+              })()}
 
-                  <div style={{ marginTop: 'auto', display: 'flex', gap: '10px', paddingTop: '10px', borderTop: '1px solid #d4d0c8' }}>
-                    <button
-                      className="xp-button"
-                      disabled={currentLevelIdx === 0}
-                      onClick={() => setCurrentLevelIdx(prev => prev - 1)}
-                    >
-                      Prethodni nivo
-                    </button>
-                    <button
-                      className="xp-button xp-button-primary"
-                      disabled={!(completedLevels.includes(currentLevel.id) || currentLevel.id <= Math.max(...completedLevels, 0))}
-                      onClick={() => {
-                        if (currentLevelIdx < levels.length - 1) {
-                          setCurrentLevelIdx(prev => prev + 1);
-                        } else {
-                          setShowSolitaire(true);
-                        }
-                      }}
-                    >
-                      Sledeći nivo {(completedLevels.includes(currentLevel.id) || currentLevel.id <= Math.max(...completedLevels, 0)) ? '🔓' : '🔒'}
-                    </button>
+              {/* 2. Instructions Window Content */}
+              {win.id === 'instructions' && (() => {
+                const scale = win.isMaximized ? 1.0 : (win.w / 480);
+                const catFontSize = Math.max(9, Math.min(18, Math.floor(11 * scale)));
+                const titleFontSize = Math.max(14, Math.min(28, Math.floor(18 * scale)));
+                const descFontSize = Math.max(11, Math.min(22, Math.floor(13 * scale)));
+                const hintFontSize = Math.max(9, Math.min(18, Math.floor(11.5 * scale)));
+                return (
+                  <div className="xp-level-panel" style={{ height: '100%', overflowY: 'auto' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                      <span style={{ fontSize: `${catFontSize}px`, fontWeight: 'bold', color: '#666' }}>KATEGORIJA: {currentLevel.category}</span>
+                      <span style={{ fontSize: `${catFontSize}px`, fontWeight: 'bold', color: '#245ddb' }}>NIVO {currentLevel.id} od {levels.length}</span>
+                    </div>
+
+                    <h2 style={{ fontSize: `${titleFontSize}px`, color: '#002e80', borderBottom: '2px solid #3b68c3', paddingBottom: '5px' }}>
+                      {currentLevel.title}
+                    </h2>
+
+                    <div
+                      style={{ fontSize: `${descFontSize}px`, lineHeight: '1.6', margin: '15px 0' }}
+                      dangerouslySetInnerHTML={{ __html: parseMarkdownToHtml(currentLevel.description) }}
+                    />
+
+                    <div className="xp-level-box" style={{ fontSize: `${hintFontSize}px` }}>
+                      <strong>💡 Pomoć i Savet:</strong>
+                      <div style={{ marginTop: '5px', whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: `${hintFontSize}px` }}>
+                        {currentLevel.hint}
+                      </div>
+                    </div>
+
+                    <div style={{ marginTop: 'auto', display: 'flex', gap: '10px', paddingTop: '10px', borderTop: '1px solid #d4d0c8' }}>
+                      <button
+                        className="xp-button"
+                        disabled={currentLevelIdx === 0}
+                        onClick={() => setCurrentLevelIdx(prev => prev - 1)}
+                        style={{ fontSize: `${Math.max(10, Math.floor(12 * scale))}px` }}
+                      >
+                        Prethodni nivo
+                      </button>
+                      <button
+                        className="xp-button xp-button-primary"
+                        disabled={!(completedLevels.includes(currentLevel.id) || currentLevel.id <= Math.max(...completedLevels, 0))}
+                        onClick={() => {
+                          if (currentLevelIdx < levels.length - 1) {
+                            setCurrentLevelIdx(prev => prev + 1);
+                          } else {
+                            setShowSolitaire(true);
+                          }
+                        }}
+                        style={{ fontSize: `${Math.max(10, Math.floor(12 * scale))}px` }}
+                      >
+                        Sledeći nivo {(completedLevels.includes(currentLevel.id) || currentLevel.id <= Math.max(...completedLevels, 0)) ? '🔓' : '🔒'}
+                      </button>
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* 3. Git Graph Window Content */}
-              {win.id === 'graph' && (
-                <GitGraph state={repoState} />
-              )}
+              {win.id === 'graph' && (() => {
+                const graphScale = win.isMaximized ? 1.0 : (win.w / 520);
+                const graphFontMultiplier = Math.max(0.7, Math.min(2.0, graphScale));
+                return (
+                  <GitGraph state={repoState} fontSizeMultiplier={graphFontMultiplier} />
+                );
+              })()}
 
               {/* 4. Credits Window Content */}
               {win.id === 'credits' && (
@@ -1641,6 +1718,24 @@ export const App: React.FC = () => {
               })()}
 
             </div>
+
+            {/* Resize Handle for Resizable Windows */}
+            {['instructions', 'terminal', 'graph'].includes(win.id) && !win.isMaximized && (
+              <div
+                style={{
+                  position: 'absolute',
+                  right: '2px',
+                  bottom: '2px',
+                  width: '12px',
+                  height: '12px',
+                  cursor: 'se-resize',
+                  backgroundImage: 'linear-gradient(135deg, transparent 30%, #808080 30%, #808080 40%, transparent 40%, transparent 50%, #808080 50%, #808080 60%, transparent 60%, transparent 70%, #808080 70%, #808080 80%, transparent 80%)',
+                  backgroundSize: '4px 4px',
+                  zIndex: 999,
+                }}
+                onMouseDown={(e) => handleResizeMouseDown(win.id, e)}
+              />
+            )}
           </div>
         );
       })}

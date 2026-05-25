@@ -7,9 +7,10 @@ interface GitGraphProps {
     commits: string[];
     branches: { [name: string]: string };
   };
+  fontSizeMultiplier?: number;
 }
 
-export const GitGraph: React.FC<GitGraphProps> = ({ state }) => {
+export const GitGraph: React.FC<GitGraphProps> = ({ state, fontSizeMultiplier = 1.0 }) => {
   const { commits, branches, head, remoteBranches } = state;
 
   // Izračunavanje kolona (X koordinata) i redova (Y koordinata) za svaki commit
@@ -192,14 +193,14 @@ export const GitGraph: React.FC<GitGraphProps> = ({ state }) => {
           fontFamily: '"Tahoma", sans-serif'
         }}>
           <div style={{
-            fontSize: '48px',
+            fontSize: `${Math.floor(48 * fontSizeMultiplier)}px`,
             marginBottom: '15px',
             filter: 'drop-shadow(1px 2px 2px rgba(0,0,0,0.15))'
           }}>🌿</div>
-          <h4 style={{ fontWeight: 'bold', color: '#224488', marginBottom: '8px' }}>
+          <h4 style={{ fontWeight: 'bold', color: '#224488', marginBottom: '8px', fontSize: `${Math.max(12, Math.floor(16 * fontSizeMultiplier))}px` }}>
             Repozitorijum je uspešno inicijalizovan!
           </h4>
-          <p style={{ fontSize: '12.5px', maxWidth: '320px', lineHeight: '1.4', color: '#555' }}>
+          <p style={{ fontSize: `${Math.max(10, Math.floor(12.5 * fontSizeMultiplier))}px`, maxWidth: '320px', lineHeight: '1.4', color: '#555' }}>
             Nalazite se na grani <strong style={{ color: '#245ddb' }}>master</strong>.<br/>
             Kreirajte svoj prvi commit kako biste započeli crtanje vizuelnog grafa!
           </p>
@@ -209,7 +210,7 @@ export const GitGraph: React.FC<GitGraphProps> = ({ state }) => {
             backgroundColor: '#ffffe1',
             border: '1px solid #d4d0c8',
             borderRadius: '4px',
-            fontSize: '11.5px',
+            fontSize: `${Math.max(9, Math.floor(11.5 * fontSizeMultiplier))}px`,
             color: '#000',
             textAlign: 'left',
             fontFamily: 'monospace',
@@ -236,12 +237,12 @@ export const GitGraph: React.FC<GitGraphProps> = ({ state }) => {
         textAlign: 'center'
       }}>
         <div style={{
-          fontSize: '36px',
+          fontSize: `${Math.floor(36 * fontSizeMultiplier)}px`,
           marginBottom: '15px',
           filter: 'drop-shadow(1px 1px 1px rgba(0,0,0,0.2))'
         }}>📁</div>
-        <h4 style={{ fontWeight: 'bold', color: '#224488', marginBottom: '8px' }}>Repozitorijum nije inicijalizovan</h4>
-        <p style={{ fontSize: '12px', maxWidth: '300px' }}>
+        <h4 style={{ fontWeight: 'bold', color: '#224488', marginBottom: '8px', fontSize: `${Math.max(12, Math.floor(16 * fontSizeMultiplier))}px` }}>Repozitorijum nije inicijalizovan</h4>
+        <p style={{ fontSize: `${Math.max(10, Math.floor(12 * fontSizeMultiplier))}px`, maxWidth: '300px' }}>
           Ukucajte <code style={{ backgroundColor: '#eef3fd', padding: '2px 4px', borderRadius: '3px', color: '#c7254e', fontWeight: 'bold' }}>git init</code> u terminal sa desne strane da započnete učenje!
         </p>
       </div>
@@ -386,7 +387,7 @@ export const GitGraph: React.FC<GitGraphProps> = ({ state }) => {
                 y={node.y + 4}
                 textAnchor="middle"
                 fill={isRemoteOnly ? "#e53e3e" : "#ffffff"}
-                fontSize="11"
+                fontSize={Math.max(8, Math.floor(11 * fontSizeMultiplier))}
                 fontWeight="bold"
                 style={{ pointerEvents: 'none', fontFamily: '"Share Tech Mono", monospace' }}
               >
@@ -397,10 +398,10 @@ export const GitGraph: React.FC<GitGraphProps> = ({ state }) => {
               <title>{`${id}: ${node.commit.message}`}</title>
               <text
                 x={node.x}
-                y={node.y + 30}
+                y={node.y + Math.max(22, Math.floor(30 * fontSizeMultiplier))}
                 textAnchor="middle"
                 fill="#4a5568"
-                fontSize="9"
+                fontSize={Math.max(7, Math.floor(9 * fontSizeMultiplier))}
                 fontWeight="500"
                 style={{ pointerEvents: 'none' }}
               >
@@ -411,9 +412,10 @@ export const GitGraph: React.FC<GitGraphProps> = ({ state }) => {
 
               {/* Iscrtavanje zastavica za grane koje pokazuju na ovaj commit */}
               {labels.length > 0 && (
-                <g transform={`translate(${node.x}, ${node.y - 25})`}>
+                <g transform={`translate(${node.x}, ${node.y - Math.max(20, Math.floor(25 * fontSizeMultiplier))})`}>
                   {labels.map((label, lIdx) => {
-                    const flagY = -lIdx * 20;
+                    const flagHeight = Math.max(12, Math.floor(16 * fontSizeMultiplier));
+                    const flagY = -lIdx * (flagHeight + 4);
                     const isRemote = label.isRemote;
                     const isHead = label.isHead;
                     
@@ -434,14 +436,14 @@ export const GitGraph: React.FC<GitGraphProps> = ({ state }) => {
                     }
 
                     const flagText = label.name + (isHead ? ' *' : '');
-                    const labelWidth = flagText.length * 6 + 14;
+                    const labelWidth = Math.max(30, Math.floor((flagText.length * 6 + 14) * fontSizeMultiplier));
 
                     return (
                       <g key={`label-${lIdx}`} transform={`translate(${-labelWidth / 2}, ${flagY})`}>
                         {/* Zastavica */}
                         <rect
                           width={labelWidth}
-                          height={16}
+                          height={flagHeight}
                           rx="3"
                           ry="3"
                           fill={bgColor}
@@ -450,9 +452,9 @@ export const GitGraph: React.FC<GitGraphProps> = ({ state }) => {
                         />
                         <text
                           x={labelWidth / 2}
-                          y="11"
+                          y={Math.max(9, Math.floor(11 * fontSizeMultiplier))}
                           textAnchor="middle"
-                          fontSize="9"
+                          fontSize={Math.max(7, Math.floor(9 * fontSizeMultiplier))}
                           fontWeight="bold"
                           fill={textColor}
                           style={{ fontFamily: '"Tahoma", "Outfit", sans-serif' }}
