@@ -85,13 +85,13 @@ const parseMarkdownToHtml = (markdown: string): string => {
     // Bullet points: * Item or - Item
     const bulletMatch = trimmed.match(/^[\*\-]\s+(.*)/);
     if (bulletMatch) {
-      return `<li style="margin-left: 20px; margin-bottom: 6px; list-style-type: disc; font-size: 13px; line-height: 1.5; color: #333;">${bulletMatch[1]}</li>`;
+      return `<li style="margin-left: 20px; margin-bottom: 6px; list-style-type: disc; font-size: inherit; line-height: 1.5; color: #333;">${bulletMatch[1]}</li>`;
     }
 
     // Numbered lists: 1. Item
     const numberMatch = trimmed.match(/^\d+\.\s+(.*)/);
     if (numberMatch) {
-      return `<li style="margin-left: 20px; margin-bottom: 6px; list-style-type: decimal; font-size: 13px; line-height: 1.5; color: #333;">${numberMatch[1]}</li>`;
+      return `<li style="margin-left: 20px; margin-bottom: 6px; list-style-type: decimal; font-size: inherit; line-height: 1.5; color: #333;">${numberMatch[1]}</li>`;
     }
 
     // Empty line
@@ -100,7 +100,7 @@ const parseMarkdownToHtml = (markdown: string): string => {
     }
 
     // Normal paragraph line
-    return `<p style="margin-bottom: 8px; line-height: 1.5; font-size: 13px; color: #333;">${line}</p>`;
+    return `<p style="margin-bottom: 8px; line-height: 1.5; font-size: inherit; color: #333;">${line}</p>`;
   });
 
   let html = processedLines.join('\n');
@@ -112,7 +112,7 @@ const parseMarkdownToHtml = (markdown: string): string => {
   html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
 
   // Replace inline code `code`
-  html = html.replace(/`([^`]+)`/g, '<code style="background-color: #f0f3fd; border: 1px solid #d3e2f9; border-radius: 3px; padding: 1.5px 5px; font-family: monospace; font-size: 12px; color: #c7254e; font-weight: bold;">$1</code>');
+  html = html.replace(/`([^`]+)`/g, '<code style="background-color: #f0f3fd; border: 1px solid #d3e2f9; border-radius: 3px; padding: 1.5px 5px; font-family: monospace; font-size: 0.9em; color: #c7254e; font-weight: bold;">$1</code>');
 
   return html;
 };
@@ -1092,8 +1092,8 @@ export const App: React.FC = () => {
               {/* 1. Terminal Window Content */}
               {win.id === 'terminal' && (() => {
                 const actualWidth = isMobile ? window.innerWidth : (win.isMaximized ? window.innerWidth : win.w);
-                const termScale = isMobile ? (actualWidth / 420) : (win.isMaximized ? 1.2 : (win.w / 520));
-                const termFontSize = Math.max(isMobile ? 12.5 : 10, Math.min(26, Math.floor(14 * termScale)));
+                const termScale = isMobile ? (actualWidth / 420) : (actualWidth / 520);
+                const termFontSize = Math.max(isMobile ? 12.5 : 10, Math.min(20, Math.floor(14 * termScale)));
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                     {/* XP Toolbar */}
@@ -1177,11 +1177,11 @@ export const App: React.FC = () => {
               {/* 2. Instructions Window Content */}
               {win.id === 'instructions' && (() => {
                 const actualWidth = isMobile ? window.innerWidth : (win.isMaximized ? window.innerWidth : win.w);
-                const scale = isMobile ? (actualWidth / 400) : (win.isMaximized ? 1.2 : (win.w / 480));
-                const catFontSize = Math.max(isMobile ? 10.5 : 9, Math.min(18, Math.floor(11 * scale)));
-                const titleFontSize = Math.max(isMobile ? 16 : 14, Math.min(28, Math.floor(18 * scale)));
-                const descFontSize = Math.max(isMobile ? 13.5 : 11, Math.min(22, Math.floor(13 * scale)));
-                const hintFontSize = Math.max(isMobile ? 11.5 : 9, Math.min(18, Math.floor(11.5 * scale)));
+                const scale = isMobile ? (actualWidth / 400) : (actualWidth / 480);
+                const catFontSize = Math.max(isMobile ? 10.5 : 9, Math.min(14, Math.floor(11 * scale)));
+                const titleFontSize = Math.max(isMobile ? 16 : 14, Math.min(24, Math.floor(18 * scale)));
+                const descFontSize = Math.max(isMobile ? 13.5 : 11, Math.min(17, Math.floor(13 * scale)));
+                const hintFontSize = Math.max(isMobile ? 11.5 : 9, Math.min(14, Math.floor(11.5 * scale)));
                 return (
                   <div className="xp-level-panel" style={{ height: '100%', overflowY: 'auto' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
@@ -1210,7 +1210,7 @@ export const App: React.FC = () => {
                         className="xp-button"
                         disabled={currentLevelIdx === 0}
                         onClick={() => setCurrentLevelIdx(prev => prev - 1)}
-                        style={{ fontSize: `${Math.max(10, Math.floor(12 * scale))}px` }}
+                        style={{ fontSize: `${Math.max(10, Math.min(15, Math.floor(12 * scale)))}px` }}
                       >
                         Prethodni nivo
                       </button>
@@ -1224,7 +1224,7 @@ export const App: React.FC = () => {
                             setShowSolitaire(true);
                           }
                         }}
-                        style={{ fontSize: `${Math.max(10, Math.floor(12 * scale))}px` }}
+                        style={{ fontSize: `${Math.max(10, Math.min(15, Math.floor(12 * scale)))}px` }}
                       >
                         Sledeći nivo {(completedLevels.includes(currentLevel.id) || currentLevel.id <= Math.max(...completedLevels, 0)) ? '🔓' : '🔒'}
                       </button>
@@ -1236,8 +1236,8 @@ export const App: React.FC = () => {
               {/* 3. Git Graph Window Content */}
               {win.id === 'graph' && (() => {
                 const actualWidth = isMobile ? window.innerWidth : (win.isMaximized ? window.innerWidth : win.w);
-                const graphScale = isMobile ? (actualWidth / 420) : (win.isMaximized ? 1.2 : (win.w / 520));
-                const graphFontMultiplier = Math.max(0.7, Math.min(2.0, graphScale));
+                const graphScale = isMobile ? (actualWidth / 420) : (actualWidth / 520);
+                const graphFontMultiplier = Math.max(0.7, Math.min(1.35, graphScale));
                 return (
                   <GitGraph state={repoState} fontSizeMultiplier={graphFontMultiplier} />
                 );
