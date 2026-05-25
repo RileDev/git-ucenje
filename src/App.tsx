@@ -1735,22 +1735,43 @@ export const App: React.FC = () => {
 
             </div>
 
-            {/* Resize Handle for Resizable Windows */}
-            {['instructions', 'terminal', 'graph'].includes(win.id) && !win.isMaximized && (
-              <div
+            {/* Bottom Status Bar with Resize Grip for Resizable Windows */}
+            {['instructions', 'terminal', 'graph'].includes(win.id) && !win.isMaximized && !isMobile && (
+              <div 
+                className="xp-window-statusbar" 
                 style={{
-                  position: 'absolute',
-                  right: '2px',
-                  bottom: '2px',
-                  width: '12px',
-                  height: '12px',
-                  cursor: 'se-resize',
-                  backgroundImage: 'linear-gradient(135deg, transparent 30%, #808080 30%, #808080 40%, transparent 40%, transparent 50%, #808080 50%, #808080 60%, transparent 60%, transparent 70%, #808080 70%, #808080 80%, transparent 80%)',
-                  backgroundSize: '4px 4px',
-                  zIndex: 999,
+                  height: '20px',
+                  backgroundColor: 'var(--xp-window-bg, #ece9d8)',
+                  borderTop: '1px solid #d4d0c8',
+                  display: 'flex',
+                  alignItems: 'center',
+                  paddingLeft: '6px',
+                  paddingRight: '16px', // Offsets scrollbars safely
+                  fontSize: '11px',
+                  color: '#444',
+                  fontFamily: 'Tahoma, Arial, sans-serif',
+                  userSelect: 'none',
+                  boxSizing: 'border-box',
+                  position: 'relative'
                 }}
-                onMouseDown={(e) => handleResizeMouseDown(win.id, e)}
-              />
+              >
+                <span>Spreman</span>
+                {/* Resize Handle is nested at the bottom right of the status bar */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    right: '2px',
+                    bottom: '2px',
+                    width: '12px',
+                    height: '12px',
+                    cursor: 'se-resize',
+                    backgroundImage: 'linear-gradient(135deg, transparent 30%, #555555 30%, #555555 40%, transparent 40%, transparent 50%, #555555 50%, #555555 60%, transparent 60%, transparent 70%, #555555 70%, #555555 80%, transparent 80%)',
+                    backgroundSize: '4px 4px',
+                    zIndex: 999,
+                  }}
+                  onMouseDown={(e) => handleResizeMouseDown(win.id, e)}
+                />
+              </div>
             )}
           </div>
         );
