@@ -650,6 +650,7 @@ body {
 }
 
 .xp-gitko-char {
+  position: relative;
   width: 90px;
   height: 90px;
   font-size: 64px;
@@ -660,6 +661,42 @@ body {
   cursor: pointer;
   filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.3));
   transition: transform 0.2s ease;
+}
+
+/* Visual hint when a saved task message is available but the bubble is hidden:
+   gentle golden glow + chat-bubble badge to indicate Gitko is clickable. */
+.xp-gitko-char-pulse {
+  animation: float 4s ease-in-out infinite, gitko-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes gitko-pulse {
+  0%, 100% { filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.3)); }
+  50%      { filter: drop-shadow(2px 2px 6px rgba(255, 215, 60, 0.95))
+                     drop-shadow(0 0 14px rgba(255, 215, 60, 0.6)); }
+}
+
+.xp-gitko-badge {
+  position: absolute;
+  bottom: 2px;
+  right: -6px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(to bottom, #ffd75e 0%, #f0a800 100%);
+  border: 1.5px solid #884a00;
+  box-shadow: 1px 1px 3px rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  line-height: 1;
+  pointer-events: none;
+  animation: gitko-badge-bounce 1.6s ease-in-out infinite;
+}
+
+@keyframes gitko-badge-bounce {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); }
 }
 
 .xp-gitko-char:hover {
