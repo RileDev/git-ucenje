@@ -22,22 +22,188 @@ import { CertificateWindow } from './components/CertificateWindow';
 import { TriviaWindow } from './components/TriviaWindow';
 import { TerminalWindow } from './components/TerminalWindow';
 import { InstructionsWindow } from './components/InstructionsWindow';
+import { ProjectExplorerWindow } from './components/ProjectExplorerWindow';
+import { LiveBrowserWindow } from './components/LiveBrowserWindow';
+import { VideoLessonWindow } from './components/VideoLessonWindow';
 import './LunaTheme.css';
 
-const initialWindows: WindowState[] = [
-  { id: 'instructions',  title: 'Uputstvo za učenje',              icon: 'xp-notepad.png',     x: 30,  y: 40,  w: 480, h: 520, isOpen: true,  isMinimized: false, isMaximized: false, active: true  },
-  { id: 'terminal',      title: 'Komandna linija (Terminal)',      icon: 'xp-terminal.png',    x: 540, y: 40,  w: 520, h: 250, isOpen: true,  isMinimized: false, isMaximized: false, active: false },
-  { id: 'graph',         title: 'Vizuelni Git Graf',               icon: 'xp-folder.png',      x: 540, y: 310, w: 520, h: 250, isOpen: true,  isMinimized: false, isMaximized: false, active: false },
-  { id: 'credits',       title: 'Zasluge i O Autoru',              icon: 'xp-info.png',        x: 200, y: 100, w: 450, h: 380, isOpen: false, isMinimized: false, isMaximized: false, active: false },
-  { id: 'controlPanel',  title: 'Control Panel (Kontrolna Tabla)', icon: 'xp-control.png',     x: 100, y: 80,  w: 460, h: 400, isOpen: false, isMinimized: false, isMaximized: false, active: false },
-  { id: 'trivia',        title: 'Doge Trivia Kviz',                icon: 'xp-game.png',        x: 120, y: 100, w: 460, h: 440, isOpen: false, isMinimized: false, isMaximized: false, active: false },
-  { id: 'certificate',   title: 'Luna Git Sertifikat',             icon: 'xp-certificate.png', x: 140, y: 50,  w: 680, h: 520, isOpen: false, isMinimized: false, isMaximized: false, active: false },
-];
+// Compute initial window layout based on user's exact specification
+const computeInitialWindows = (): WindowState[] => {
+  const w = typeof window !== 'undefined' ? window.innerWidth : 1440;
+  const h = typeof window !== 'undefined' ? window.innerHeight : 900;
+  const totalHeight = Math.max(500, h - 35); // account for 35px taskbar
+  const gap = 6;
+  const leftMargin = 10;
+  const topMargin = 6;
 
-const RESIZABLE_IDS = new Set(['instructions', 'terminal', 'graph']);
+  // Left Column (Instructions): ~22% of screen
+  const w1 = Math.max(280, Math.floor(w * 0.22));
+  const h1 = totalHeight - 12;
+
+  // Right Column (Live Browser): ~26% of screen
+  const w4 = Math.max(300, Math.floor(w * 0.26));
+  const h4 = totalHeight - 12;
+  const x4 = w - w4 - 10;
+
+  // Middle Section (Between Col 1 and Col 4)
+  const xMid = leftMargin + w1 + gap;
+  const midWidth = Math.max(360, x4 - gap - xMid);
+
+  // Top Half of Middle: Git Graph & File Explorer
+  const topHeight = Math.floor((totalHeight - 12 - gap) * 0.46);
+  const wGraph = Math.floor((midWidth - gap) * 0.5);
+  const wExplorer = midWidth - gap - wGraph;
+  const xExplorer = xMid + wGraph + gap;
+
+  // Bottom Half of Middle: Terminal
+  const yBottom = topMargin + topHeight + gap;
+  const bottomHeight = totalHeight - 12 - topHeight - gap;
+
+  return [
+    {
+      id: 'instructions',
+      title: 'Uputstvo za učenje (Kafić Luna)',
+      icon: 'xp-notepad.png',
+      x: leftMargin,
+      y: topMargin,
+      w: w1,
+      h: h1,
+      isOpen: true,
+      isMinimized: false,
+      isMaximized: false,
+      active: true,
+    },
+    {
+      id: 'graph',
+      title: 'Vizuelni Git Graf',
+      icon: 'xp-folder.png',
+      x: xMid,
+      y: topMargin,
+      w: wGraph,
+      h: topHeight,
+      isOpen: true,
+      isMinimized: false,
+      isMaximized: false,
+      active: false,
+    },
+    {
+      id: 'projectExplorer',
+      title: 'Projekat: kafic-luna',
+      icon: 'xp-computer.png',
+      x: xExplorer,
+      y: topMargin,
+      w: wExplorer,
+      h: topHeight,
+      isOpen: true,
+      isMinimized: false,
+      isMaximized: false,
+      active: false,
+    },
+    {
+      id: 'terminal',
+      title: 'Komandna linija (Terminal)',
+      icon: 'xp-terminal.png',
+      x: xMid,
+      y: yBottom,
+      w: midWidth,
+      h: bottomHeight,
+      isOpen: true,
+      isMinimized: false,
+      isMaximized: false,
+      active: false,
+    },
+    {
+      id: 'liveBrowser',
+      title: 'Kafić Luna — Live Web Pregledač',
+      icon: 'xp-palette.png',
+      x: x4,
+      y: topMargin,
+      w: w4,
+      h: h4,
+      isOpen: true,
+      isMinimized: false,
+      isMaximized: false,
+      active: false,
+    },
+    {
+      id: 'videoLesson',
+      title: 'Nivo 3: Git Remote & GitHub (Video Lekcija)',
+      icon: 'xp-info.png',
+      x: Math.floor(w * 0.2),
+      y: 50,
+      w: 720,
+      h: 520,
+      isOpen: false,
+      isMinimized: false,
+      isMaximized: false,
+      active: false,
+    },
+    {
+      id: 'credits',
+      title: 'Zasluge i O Autoru',
+      icon: 'xp-info.png',
+      x: 200,
+      y: 100,
+      w: 450,
+      h: 380,
+      isOpen: false,
+      isMinimized: false,
+      isMaximized: false,
+      active: false,
+    },
+    {
+      id: 'controlPanel',
+      title: 'Control Panel (Kontrolna Tabla)',
+      icon: 'xp-control.png',
+      x: 100,
+      y: 80,
+      w: 460,
+      h: 400,
+      isOpen: false,
+      isMinimized: false,
+      isMaximized: false,
+      active: false,
+    },
+    {
+      id: 'trivia',
+      title: 'Doge Trivia Kviz',
+      icon: 'xp-game.png',
+      x: 120,
+      y: 100,
+      w: 460,
+      h: 440,
+      isOpen: false,
+      isMinimized: false,
+      isMaximized: false,
+      active: false,
+    },
+    {
+      id: 'certificate',
+      title: 'Luna Git Sertifikat',
+      icon: 'xp-certificate.png',
+      x: 140,
+      y: 50,
+      w: 680,
+      h: 520,
+      isOpen: false,
+      isMinimized: false,
+      isMaximized: false,
+      active: false,
+    },
+  ];
+};
+
+const RESIZABLE_IDS = new Set([
+  'instructions',
+  'terminal',
+  'graph',
+  'projectExplorer',
+  'liveBrowser',
+  'videoLesson',
+]);
 
 const INITIAL_GREETING =
-  'Zdravo! Ja sam Gitko. Pokreni učenje klikom na "Pokreni program" u Start meniju ili osmotri prečice na radnoj površini!';
+  'Zdravo! Ja sam Gitko. Dobrodošli u novi projekat "Kafić Luna"! Pogledaj raspored prozora i uputstvo sa leve strane!';
 
 export const App: React.FC = () => {
   // ── Level progress ────────────────────────────────────────────────────────
@@ -52,14 +218,73 @@ export const App: React.FC = () => {
   const currentLevel: Level = levels[currentLevelIdx] || levels[0];
 
   // ── Repo / terminal state ─────────────────────────────────────────────────
-  const [repoState, setRepoState] = useState<RepoState>(() => currentLevel.initialState);
+  const [repoState, setRepoState] = useState<RepoState>(() =>
+    JSON.parse(JSON.stringify(currentLevel.initialState))
+  );
   const [terminalHistory, setTerminalHistory] = useState<TerminalEntry[]>([]);
   const [terminalInput, setTerminalInput] = useState<string>('');
   const [levelCommandsRun, setLevelCommandsRun] = useState<string[]>([]);
 
   // ── Window manager ────────────────────────────────────────────────────────
-  const wm = useWindowManager(initialWindows);
+  const wm = useWindowManager(computeInitialWindows());
   const { windows, setWindows } = wm;
+
+  // ── Zoom / Accessibility state per window ─────────────────────────────────
+  const [zoomScales, setZoomScales] = useState<Record<string, number>>(() => {
+    const saved = localStorage.getItem('luna_git_zoom_scales');
+    return saved ? JSON.parse(saved) : { instructions: 1.05 };
+  });
+
+  useEffect(() => {
+    localStorage.setItem('luna_git_zoom_scales', JSON.stringify(zoomScales));
+  }, [zoomScales]);
+
+  const handleZoomIn = useCallback((id: string) => {
+    setZoomScales(prev => {
+      const current = prev[id] || 1.0;
+      const next = Math.min(2.5, +(current + 0.15).toFixed(2));
+      return { ...prev, [id]: next };
+    });
+  }, []);
+
+  const handleZoomOut = useCallback((id: string) => {
+    setZoomScales(prev => {
+      const current = prev[id] || 1.0;
+      const next = Math.max(0.6, +(current - 0.15).toFixed(2));
+      return { ...prev, [id]: next };
+    });
+  }, []);
+
+  const handleZoomReset = useCallback((id: string) => {
+    setZoomScales(prev => ({ ...prev, [id]: 1.0 }));
+  }, []);
+
+  // Keyboard accessibility shortcuts for Ctrl + + / Ctrl + - / Ctrl + 0
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === '+' || e.key === '=' || e.code === 'NumpadAdd') {
+          e.preventDefault();
+          const activeWin = windows.find(w => w.active && w.isOpen && !w.isMinimized);
+          const targetId = activeWin ? activeWin.id : 'instructions';
+          handleZoomIn(targetId);
+        } else if (e.key === '-' || e.code === 'NumpadSubtract') {
+          e.preventDefault();
+          const activeWin = windows.find(w => w.active && w.isOpen && !w.isMinimized);
+          const targetId = activeWin ? activeWin.id : 'instructions';
+          handleZoomOut(targetId);
+        } else if (e.key === '0' || e.code === 'Numpad0') {
+          e.preventDefault();
+          const activeWin = windows.find(w => w.active && w.isOpen && !w.isMinimized);
+          const targetId = activeWin ? activeWin.id : 'instructions';
+          handleZoomReset(targetId);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown, { passive: false });
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [windows, handleZoomIn, handleZoomOut, handleZoomReset]);
 
   // ── Settings ──────────────────────────────────────────────────────────────
   const [bgTheme, setBgTheme] = useState<BgTheme>(
@@ -78,8 +303,6 @@ export const App: React.FC = () => {
     () => localStorage.getItem('luna_git_sound') !== 'false'
   );
 
-  // Ref shadow of soundEnabled so the once-on-mount startup sound effect doesn't
-  // close over a stale value (item #3).
   const soundEnabledRef = useRef(soundEnabled);
   useEffect(() => { soundEnabledRef.current = soundEnabled; }, [soundEnabled]);
 
@@ -103,7 +326,7 @@ export const App: React.FC = () => {
   const dragInfo = useRef<{ winId: string; startX: number; startY: number; winX: number; winY: number } | null>(null);
   const resizeInfo = useRef<{ winId: string; startWidth: number; startHeight: number; startX: number; startY: number } | null>(null);
 
-  // ── Effects: viewport, clock, startup sound, persisters, level reset ──────
+  // ── Effects ───────────────────────────────────────────────────────────────
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', onResize);
@@ -135,18 +358,18 @@ export const App: React.FC = () => {
   useEffect(() => { localStorage.setItem('luna_git_sound', soundEnabled ? 'true' : 'false'); }, [soundEnabled]);
 
   useEffect(() => {
-    setRepoState(currentLevel.initialState);
+    setRepoState(JSON.parse(JSON.stringify(currentLevel.initialState)));
     setTerminalHistory([{
-      output: `Dobrodošli na Nivo ${currentLevel.id}: ${currentLevel.title}\nUkucajte 'git help' da vidite podržane komande.`,
+      output: `Dobrodošli u Projekat "Kafić Luna" — ${currentLevel.title}\nUkucajte 'git help' da vidite podržane komande.`,
     }]);
     setTerminalInput('');
     setLevelCommandsRun([]);
-    setTaskMsg(`Nivo ${currentLevel.id}: ${currentLevel.title}. Pročitaj uputstvo levo i unesi prvu komandu u terminal!`);
+    setTaskMsg(`${currentLevel.title}. Pogledaj zadatak u levom prozoru i unesi prvu komandu!`);
     localStorage.setItem('luna_git_current_level', currentLevelIdx.toString());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentLevelIdx]);
 
-  // ── Drag / resize handlers ────────────────────────────────────────────────
+  // ── Drag handlers ─────────────────────────────────────────────────────────
   const handleGlobalMouseMove = (e: MouseEvent) => {
     if (!dragInfo.current) return;
     const info = dragInfo.current;
@@ -182,11 +405,8 @@ export const App: React.FC = () => {
     const info = resizeInfo.current;
     const dx = e.clientX - info.startX;
     const dy = e.clientY - info.startY;
-    let minW = 300;
-    let minH = 200;
-    if (info.winId === 'instructions') { minW = 480; minH = 520; }
-    else if (info.winId === 'terminal') { minW = 520; minH = 250; }
-    else if (info.winId === 'graph')    { minW = 520; minH = 250; }
+    const minW = 220;
+    const minH = 160;
     setWindows(prev => prev.map(w => w.id === info.winId
       ? { ...w, w: Math.max(minW, info.startWidth + dx), h: Math.max(minH, info.startHeight + dy) }
       : w
@@ -240,7 +460,7 @@ export const App: React.FC = () => {
 
     if (result.error) {
       if (soundEnabled) playXpError();
-      setTaskMsg(`Oops! Komanda '${cmd}' je prijavila grešku. Pogledaj ispis u terminalu ili klikni na 'Pomoć' na radnoj površini!`);
+      setTaskMsg(`Oops! Komanda '${cmd}' je prijavila grešku. Pogledaj ispis u terminalu ili potraži Hint levo!`);
       currentHist[currentHist.length - 1].output = result.output;
       currentHist[currentHist.length - 1].isError = true;
       setTerminalHistory(currentHist);
@@ -256,7 +476,8 @@ export const App: React.FC = () => {
         const expectedCleaned = expectedCmd.toLowerCase().trim().replace(/\s+/g, ' ');
         if (
           typedCleaned.startsWith(expectedCleaned) ||
-          (expectedCleaned === 'git checkout' && typedCleaned.startsWith('git switch'))
+          (expectedCleaned === 'git checkout' && typedCleaned.startsWith('git switch')) ||
+          (expectedCleaned === 'git switch' && typedCleaned.startsWith('git checkout'))
         ) {
           if (!updatedCommandsRun.includes(expectedCleaned)) {
             updatedCommandsRun.push(expectedCleaned);
@@ -276,10 +497,10 @@ export const App: React.FC = () => {
 
       setLevelCommandsRun(updatedCommandsRun);
 
-      const solved = currentLevel.validate(result.newState);
-      const allExpectedRun = currentLevel.expectedCommands.every(cmdName => {
+      const solved = currentLevel.validate(result.newState, updatedCommandsRun);
+      const allExpectedRun = currentLevel.expectedCommands.length === 0 || currentLevel.expectedCommands.every(cmdName => {
         const cleanedExpected = cmdName.toLowerCase().trim();
-        if (cleanedExpected === 'git checkout') {
+        if (cleanedExpected === 'git checkout' || cleanedExpected === 'git switch') {
           return updatedCommandsRun.includes('git checkout') || updatedCommandsRun.includes('git switch');
         }
         return updatedCommandsRun.includes(cleanedExpected);
@@ -287,7 +508,7 @@ export const App: React.FC = () => {
 
       if (solved && allExpectedRun) {
         if (soundEnabled) playXpSuccess();
-        setTaskMsg('Fenomenalno! Uspešno si rešio sve zadatke na ovom nivou! Pogledaj sledeći korak.');
+        setTaskMsg('Fenomenalno! Uspešno si rešio sve zadatke za ovu lekciju! Pređi na sledeći korak.');
         const nextCompleted = Array.from(new Set([...completedLevels, currentLevel.id]));
         setCompletedLevels(nextCompleted);
         localStorage.setItem('luna_git_completed', JSON.stringify(nextCompleted));
@@ -295,14 +516,14 @@ export const App: React.FC = () => {
       } else if (solved && !allExpectedRun) {
         const missingCmds = currentLevel.expectedCommands.filter(cmdName => {
           const cleaned = cmdName.toLowerCase().trim();
-          if (cleaned === 'git checkout') {
+          if (cleaned === 'git checkout' || cleaned === 'git switch') {
             return !updatedCommandsRun.includes('git checkout') && !updatedCommandsRun.includes('git switch');
           }
           return !updatedCommandsRun.includes(cleaned);
         });
-        setTaskMsg(`Skoro je gotovo! Uspešno ste podesili repozitorijum, ali da biste zaista savladali nivo, morate isprobati i preostale komande u uputstvu: ${missingCmds.join(', ')}!`);
+        setTaskMsg(`Skoro gotovo! Preostalo je da isprobaš i komandu: ${missingCmds.join(', ')}!`);
       } else {
-        setTaskMsg('Dobar korak! Nastavi dalje da pratiš uputstva kako bi rešio nivo.');
+        setTaskMsg('Odličan korak! Nastavi da pratiš uputstvo i unesi sledeću komandu.');
       }
     }
 
@@ -316,7 +537,7 @@ export const App: React.FC = () => {
       setCurrentLevelIdx(prev => prev + 1);
     } else {
       setShowSolitaire(true);
-      setTaskMsg('ČESTITAMO! Uspešno si prošao kompletnu obuku za Git na srpskoj latinici u Luna Git platformi!');
+      setTaskMsg('ČESTITAMO! Uspešno si prošao kompletan kurs za Git na projektu Kafić Luna!');
     }
   };
 
@@ -328,23 +549,21 @@ export const App: React.FC = () => {
       setCurrentLevelIdx(0);
       setShowSolitaire(false);
       setIsStartOpen(false);
-      setWindows(prev => prev.map(w =>
-        RESIZABLE_IDS.has(w.id) ? { ...w, isOpen: true } : w
-      ));
+      setWindows(computeInitialWindows());
     }
   };
 
   const resetCurrentLevel = () => {
     if (
       window.confirm(
-        `Da li ste sigurni da želite da resetujete stanje za trenutni nivo "${currentLevel.title}"? Sve unete komande i stanje fajlova za ovaj nivo će biti vraćeni na početak.`
+        `Da li ste sigurni da želite da resetujete stanje za trenutnu lekciju "${currentLevel.title}"?`
       )
     ) {
       setRepoState(JSON.parse(JSON.stringify(currentLevel.initialState)));
       setLevelCommandsRun([]);
       setTerminalHistory([{
         input: 'clear',
-        output: `Stanje za nivo "${currentLevel.title}" je uspešno resetovano. Srećno učenje!\nUnesite prvu komandu...`,
+        output: `Stanje za lekciju "${currentLevel.title}" je uspešno resetovano.\nUnesite komandu...`,
       }]);
       if (soundEnabled) playTone(400, 0, 0.25, 'sine');
       setIsStartOpen(false);
@@ -360,8 +579,8 @@ export const App: React.FC = () => {
   const handleChangeAssistant = (a: AssistantChar) => {
     setAssistantChar(a);
     const welcomeMsgs: Record<AssistantChar, string> = {
-      doge:  'Vau! Gitko Doge je ponovo tu! Mnogo git, vrlo grana!',
-      snake: 'Snake ovde. Spreman za akciju na terenu. Pazi se!',
+      doge:  'Vau! Gitko Doge je ponovo tu! Mnogo git, vrlo Kafić Luna!',
+      snake: 'Snake ovde. Spreman za rad na projektu Kafić Luna. Pazi se!',
       bonzi: 'Zdravo! Ja sam tvoj najbolji ljubičasti drugar BonziBuddy!',
     };
     setGitkoMsg(welcomeMsgs[a]);
@@ -410,6 +629,10 @@ export const App: React.FC = () => {
             win={win}
             isMobile={isMobile}
             resizable={RESIZABLE_IDS.has(win.id)}
+            zoomScale={zoomScales[win.id] || 1.0}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onZoomReset={handleZoomReset}
             onFocus={focusWindow}
             onClose={handleClose}
             onMinimize={handleMinimize}
@@ -417,6 +640,39 @@ export const App: React.FC = () => {
             onTitleBarMouseDown={handleTitleBarMouseDown}
             onResizeMouseDown={handleResizeMouseDown}
           >
+            {win.id === 'instructions' && (
+              <InstructionsWindow
+                win={win}
+                isMobile={isMobile}
+                currentLevel={currentLevel}
+                currentLevelIdx={currentLevelIdx}
+                setCurrentLevelIdx={setCurrentLevelIdx}
+                completedLevels={completedLevels}
+                setShowSolitaire={setShowSolitaire}
+                onOpenVideo={() => wm.focusWindow('videoLesson')}
+              />
+            )}
+
+            {win.id === 'graph' && (() => {
+              const actualWidth = isMobile
+                ? window.innerWidth
+                : (win.isMaximized ? window.innerWidth : win.w);
+              const graphScale = isMobile ? (actualWidth / 420) : (actualWidth / 520);
+              const fontMul = Math.max(0.7, Math.min(1.35, graphScale));
+              return <GitGraph state={repoState} fontSizeMultiplier={fontMul} />;
+            })()}
+
+            {win.id === 'projectExplorer' && (
+              <ProjectExplorerWindow
+                win={win}
+                isMobile={isMobile}
+                repoState={repoState}
+                setRepoState={setRepoState}
+                currentLevel={currentLevel}
+                soundEnabled={soundEnabled}
+              />
+            )}
+
             {win.id === 'terminal' && (
               <TerminalWindow
                 win={win}
@@ -431,26 +687,29 @@ export const App: React.FC = () => {
                 setGitkoMsg={setGitkoMsg}
               />
             )}
-            {win.id === 'instructions' && (
-              <InstructionsWindow
+
+            {win.id === 'liveBrowser' && (
+              <LiveBrowserWindow
                 win={win}
                 isMobile={isMobile}
+                repoState={repoState}
                 currentLevel={currentLevel}
-                currentLevelIdx={currentLevelIdx}
-                setCurrentLevelIdx={setCurrentLevelIdx}
-                completedLevels={completedLevels}
-                setShowSolitaire={setShowSolitaire}
               />
             )}
-            {win.id === 'graph' && (() => {
-              const actualWidth = isMobile
-                ? window.innerWidth
-                : (win.isMaximized ? window.innerWidth : win.w);
-              const graphScale = isMobile ? (actualWidth / 420) : (actualWidth / 520);
-              const fontMul = Math.max(0.7, Math.min(1.35, graphScale));
-              return <GitGraph state={repoState} fontSizeMultiplier={fontMul} />;
-            })()}
+
+            {win.id === 'videoLesson' && (
+              <VideoLessonWindow
+                win={win}
+                isMobile={isMobile}
+                onOpenCertificate={() => {
+                  wm.closeWindow('videoLesson');
+                  wm.focusWindow('certificate');
+                }}
+              />
+            )}
+
             {win.id === 'credits' && <CreditsWindow />}
+
             {win.id === 'controlPanel' && (
               <ControlPanelWindow
                 bgTheme={bgTheme}
@@ -463,6 +722,7 @@ export const App: React.FC = () => {
                 onSaveUserName={handleSaveUserName}
               />
             )}
+
             {win.id === 'trivia' && (
               <TriviaWindow
                 assistantChar={assistantChar}
@@ -470,6 +730,7 @@ export const App: React.FC = () => {
                 setGitkoMsg={setGitkoMsg}
               />
             )}
+
             {win.id === 'certificate' && (
               <CertificateWindow
                 completedLevels={completedLevels}

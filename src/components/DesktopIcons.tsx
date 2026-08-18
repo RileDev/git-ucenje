@@ -5,13 +5,15 @@ interface DesktopIconsProps {
 }
 
 const icons: { id: string; label: string; img: string }[] = [
-  { id: 'instructions',  label: 'Uputstvo',      img: 'xp-notepad.png'     },
-  { id: 'terminal',      label: 'Git Terminal',  img: 'xp-terminal.png'    },
-  { id: 'graph',         label: 'Git Graf',      img: 'xp-folder.png'      },
-  { id: 'controlPanel',  label: 'Control Panel', img: 'xp-control.png'     },
-  { id: 'trivia',        label: 'Doge Kviz',     img: 'xp-game.png'        },
-  { id: 'certificate',   label: 'Sertifikat',    img: 'xp-certificate.png' },
-  { id: 'credits',       label: 'Credits',       img: 'xp-info.png'        },
+  { id: 'instructions',     label: 'Uputstvo',        img: 'xp-notepad.png'     },
+  { id: 'graph',            label: 'Git Graf',        img: 'xp-folder.png'      },
+  { id: 'projectExplorer',  label: 'Kafić Luna',      img: 'xp-computer.png'    },
+  { id: 'terminal',         label: 'Git Terminal',    img: 'xp-terminal.png'    },
+  { id: 'liveBrowser',      label: 'Live Web',        img: 'xp-palette.png'     },
+  // { id: 'videoLesson',   label: 'Nivo 3 Video',    img: 'xp-info.png'        },
+  { id: 'certificate',      label: 'Sertifikat',      img: 'xp-certificate.png' },
+  { id: 'controlPanel',     label: 'Control Panel',   img: 'xp-control.png'     },
+  { id: 'trivia',           label: 'Doge Kviz',       img: 'xp-game.png'        },
 ];
 
 export const DesktopIcons: React.FC<DesktopIconsProps> = ({ onToggle }) => (

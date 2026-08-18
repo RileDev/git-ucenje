@@ -20,3 +20,15 @@ export interface TerminalEntry {
   output: string;
   isError?: boolean;
 }
+
+export type GitFileStatus = 'untracked' | 'staged' | 'modified' | 'tracked' | 'ignored' | 'conflict';
+
+export interface ProjectFile {
+  name: string;
+  path: string;
+  status: GitFileStatus;
+  isDir?: boolean;
+  size?: string;
+  content?: string;
+  icon?: string;
+}

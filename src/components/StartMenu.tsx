@@ -35,22 +35,36 @@ export const StartMenu: React.FC<StartMenuProps> = ({
         <div className="xp-start-item" onClick={onStartLearning}>
           <img src="xp-computer.png" alt="" style={{ width: 24, height: 24, objectFit: 'contain' }} />
           <div>
-            <strong>Pokreni program za učenje</strong>
-            <div className="xp-start-item-subtext">Počni od prvog nivoa</div>
+            <strong>Kafić Luna Kurs</strong>
+            <div className="xp-start-item-subtext">Počni od prve lekcije</div>
+          </div>
+        </div>
+        <div className="xp-start-item" onClick={() => onOpen('projectExplorer')}>
+          <img src="xp-folder.png" alt="" style={{ width: 24, height: 24, objectFit: 'contain' }} />
+          <div>
+            <strong>Projekat: kafic-luna</strong>
+            <div className="xp-start-item-subtext">File Explorer & Status</div>
+          </div>
+        </div>
+        <div className="xp-start-item" onClick={() => onOpen('liveBrowser')}>
+          <img src="xp-palette.png" alt="" style={{ width: 24, height: 24, objectFit: 'contain' }} />
+          <div>
+            <strong>Live Web Browser</strong>
+            <div className="xp-start-item-subtext">Kafić Luna sajt uživo</div>
           </div>
         </div>
         <div className="xp-start-item" onClick={() => onOpen('terminal')}>
           <img src="xp-terminal.png" alt="" style={{ width: 24, height: 24, objectFit: 'contain' }} />
           <div>
-            <strong>Git Command Prompt</strong>
-            <div className="xp-start-item-subtext">Terminal za kucanje komandi</div>
+            <strong>Git Terminal</strong>
+            <div className="xp-start-item-subtext">Komandna linija</div>
           </div>
         </div>
         <div className="xp-start-item" onClick={() => onOpen('graph')}>
           <img src="xp-folder.png" alt="" style={{ width: 24, height: 24, objectFit: 'contain' }} />
           <div>
             <strong>Git Graph Explorer</strong>
-            <div className="xp-start-item-subtext">Vizuelni pregled stabla</div>
+            <div className="xp-start-item-subtext">Vizuelni prikaz grana</div>
           </div>
         </div>
         <div className="xp-start-separator" />
@@ -58,7 +72,7 @@ export const StartMenu: React.FC<StartMenuProps> = ({
           <img src="xp-info.png" alt="" style={{ width: 24, height: 24, objectFit: 'contain' }} />
           <div>
             <strong>About Luna Git</strong>
-            <div className="xp-start-item-subtext">O autoru i predavanjima</div>
+            <div className="xp-start-item-subtext">O autoru i projektu</div>
           </div>
         </div>
       </div>
@@ -66,7 +80,11 @@ export const StartMenu: React.FC<StartMenuProps> = ({
       <div className="xp-start-right">
         <div className="xp-start-item" onClick={() => onOpen('instructions')}>
           <img src="xp-notepad.png" alt="" style={{ width: 16, height: 16, objectFit: 'contain', marginRight: 6 }} />
-          <span>Uputstva za nivoe</span>
+          <span>Uputstva za lekcije</span>
+        </div>
+        <div className="xp-start-item" onClick={() => onOpen('videoLesson')}>
+          <img src="xp-info.png" alt="" style={{ width: 16, height: 16, objectFit: 'contain', marginRight: 6 }} />
+          <span>Nivo 3: Video Lekcija</span>
         </div>
         <div className="xp-start-item" onClick={onContinueProgress}>
           <img src="xp-game.png" alt="" style={{ width: 16, height: 16, objectFit: 'contain', marginRight: 6 }} />
@@ -88,7 +106,7 @@ export const StartMenu: React.FC<StartMenuProps> = ({
         <div className="xp-start-separator" />
         <div className="xp-start-item" onClick={onResetCurrent}>
           <img src="xp-lightning.png" alt="" style={{ width: 16, height: 16, objectFit: 'contain', marginRight: 6 }} />
-          <span>Resetuj trenutni nivo</span>
+          <span>Resetuj trenutnu lekciju</span>
         </div>
         <div className="xp-start-item" onClick={onResetAll}>
           <img src="xp-refresh.png" alt="" style={{ width: 16, height: 16, objectFit: 'contain', marginRight: 6 }} />

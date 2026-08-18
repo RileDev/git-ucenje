@@ -5,6 +5,10 @@ interface XpWindowProps {
   win: WindowState;
   isMobile: boolean;
   resizable: boolean;
+  zoomScale?: number;
+  onZoomIn?: (id: string) => void;
+  onZoomOut?: (id: string) => void;
+  onZoomReset?: (id: string) => void;
   onFocus: (id: string) => void;
   onClose: (id: string, e: React.MouseEvent) => void;
   onMinimize: (id: string, e: React.MouseEvent) => void;
@@ -18,6 +22,10 @@ export const XpWindow: React.FC<XpWindowProps> = ({
   win,
   isMobile,
   resizable,
+  zoomScale = 1.0,
+  onZoomIn,
+  onZoomOut,
+  onZoomReset,
   onFocus,
   onClose,
   onMinimize,
@@ -31,14 +39,17 @@ export const XpWindow: React.FC<XpWindowProps> = ({
     ? { top: 0, left: 0, width: '100vw', height: 'calc(100vh - 40px)', position: 'absolute' }
     : { top: win.y, left: win.x, width: win.w, height: win.h, position: 'absolute' };
 
+  const zoomPercent = Math.round(zoomScale * 100);
+
   return (
     <div
       className={`xp-window ${isFocused ? 'active' : ''}`}
       style={style}
       onClick={() => onFocus(win.id)}
     >
+      {/* Title bar */}
       <div className="xp-window-titlebar" onMouseDown={(e) => onTitleBarMouseDown(win.id, e)}>
-        <div className="xp-window-title">
+        <div className="xp-window-title" style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {win.icon.endsWith('.png') ? (
             <img src={win.icon} alt="" style={{ width: 16, height: 16, objectFit: 'contain', marginRight: 4 }} />
           ) : (
@@ -46,6 +57,35 @@ export const XpWindow: React.FC<XpWindowProps> = ({
           )}
           <span>{win.title}</span>
         </div>
+
+        {/* Titlebar Accessibility Zoom Controls */}
+        <div className="xp-window-zoom-controls" onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            className="xp-zoom-btn"
+            title="Odzumiraj sadržaj (Ctrl + -)"
+            onClick={() => onZoomOut && onZoomOut(win.id)}
+          >
+            A-
+          </button>
+          <div
+            className="xp-zoom-label"
+            title="Klikni za resetovanje na 100% (Ctrl + 0)"
+            onClick={() => onZoomReset && onZoomReset(win.id)}
+          >
+            {zoomPercent}%
+          </div>
+          <button
+            type="button"
+            className="xp-zoom-btn"
+            title="Uzumiraj sadržaj (Ctrl + +)"
+            onClick={() => onZoomIn && onZoomIn(win.id)}
+          >
+            A+
+          </button>
+        </div>
+
+        {/* Window Chrome Controls */}
         <div className="xp-window-controls">
           <div className="xp-control-btn xp-btn-minimize" onClick={(e) => onMinimize(win.id, e)} />
           <div className="xp-control-btn xp-btn-maximize" onClick={(e) => onMaximize(win.id, e)} />
@@ -53,8 +93,35 @@ export const XpWindow: React.FC<XpWindowProps> = ({
         </div>
       </div>
 
-      <div className="xp-window-content">{children}</div>
+      {/* Window Content Container with Accessibility Zoom */}
+      <div
+        className="xp-window-content"
+        style={{
+          flex: 1,
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            zoom: zoomScale,
+            overflow: 'auto',
+          }}
+        >
+          {children}
+        </div>
+      </div>
 
+      {/* Status bar */}
       {resizable && !win.isMaximized && !isMobile && (
         <div
           className="xp-window-statusbar"
@@ -66,7 +133,7 @@ export const XpWindow: React.FC<XpWindowProps> = ({
             alignItems: 'center',
             paddingLeft: 6,
             paddingRight: 16,
-            fontSize: 11,
+            fontSize: 10.5,
             color: '#444',
             fontFamily: 'Tahoma, Arial, sans-serif',
             userSelect: 'none',
@@ -74,7 +141,7 @@ export const XpWindow: React.FC<XpWindowProps> = ({
             position: 'relative',
           }}
         >
-          <span>Spreman</span>
+          <span>Sadržaj: {zoomPercent}%</span>
           <div
             style={{
               position: 'absolute',

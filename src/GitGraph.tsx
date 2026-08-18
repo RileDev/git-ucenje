@@ -3,26 +3,21 @@ import { type RepoState, type Commit, getCommitList } from './gitEngine';
 
 interface GitGraphProps {
   state: RepoState;
-  goalState?: {
-    commits: string[];
-    branches: { [name: string]: string };
-  };
   fontSizeMultiplier?: number;
 }
 
 export const GitGraph: React.FC<GitGraphProps> = ({ state, fontSizeMultiplier = 1.0 }) => {
-  const { commits, branches, head, remoteBranches } = state;
+  const { commits, branches, head, remoteBranches, tags } = state;
 
-  // Izračunavanje kolona (X koordinata) i redova (Y koordinata) za svaki commit
+  // Izračunavanje kolona (X) i redova (Y) za svaki commit
   const layout = useMemo(() => {
     const commitList = getCommitList(commits);
     if (commitList.length === 0) return { nodes: {}, edges: [] };
 
     const nodes: { [id: string]: { x: number; y: number; col: number; row: number; commit: Commit } } = {};
-    const edges: { from: string; to: string }[] = [];
+    const edges: { from: string; to: string; isMerge?: boolean }[] = [];
 
-    // 1. Pronalaženje kolona (X) - širina grafa
-    // col = dubina commit-a od korena
+    // 1. Pronalaženje kolona (X) - redosled commit-ova
     const memoCol: { [id: string]: number } = {};
     const getCol = (id: string): number => {
       if (memoCol[id] !== undefined) return memoCol[id];
@@ -37,50 +32,40 @@ export const GitGraph: React.FC<GitGraphProps> = ({ state, fontSizeMultiplier = 
       return col;
     };
 
-    // 2. Pronalaženje redova (Y) - visina grafa
-    // master je na redu 0. feature je na 1, bugfix na -1 itd.
+    // 2. Pronalaženje redova (Y) po granama
     const memoRow: { [id: string]: number } = {};
     const branchRows: { [name: string]: number } = {
-      master: 0,
       main: 0,
-      feature: 1,
+      master: 0,
+      'meni-sekcija': 1,
+      'kontakt-forma': -1,
       develop: -1,
-      bugfix: 2,
-      hotfix: -2,
-      'origin/master': 0
+      feature: 1,
+      'origin/main': 0
     };
 
-    let nextAvailableRow = 3;
+    let nextRow = 2;
 
-    // Pridruživanje redova na osnovu grana
     const getRow = (id: string): number => {
       if (memoRow[id] !== undefined) return memoRow[id];
-      
       const commit = commits[id];
       if (!commit) return 0;
 
-      // Da li neka grana pokazuje direktno na ovaj commit?
-      const pointingBranches = Object.keys(branches).filter(b => branches[b] === id);
-      if (remoteBranches) {
-        pointingBranches.push(...Object.keys(remoteBranches).filter(b => remoteBranches[b] === id));
-      }
-
-      if (pointingBranches.length > 0) {
-        // Uzmi prvi definisan red za neku od ovih grana
-        for (const b of pointingBranches) {
+      // Check pointing branches
+      const pointing = Object.keys(branches).filter(b => branches[b] === id);
+      if (pointing.length > 0) {
+        for (const b of pointing) {
           if (branchRows[b] !== undefined) {
             memoRow[id] = branchRows[b];
             return branchRows[b];
           }
         }
-        // Ako nema predefinisanog, kreiraj novi red za prvu granu
-        const newRow = nextAvailableRow++;
-        branchRows[pointingBranches[0]] = newRow;
-        memoRow[id] = newRow;
-        return newRow;
+        const assigned = nextRow++;
+        branchRows[pointing[0]] = assigned;
+        memoRow[id] = assigned;
+        return assigned;
       }
 
-      // Ako nema direktne grane, nasledi red od prvog roditelja
       if (commit.parentIds.length > 0) {
         const parentRow = getRow(commit.parentIds[0]);
         memoRow[id] = parentRow;
@@ -91,17 +76,15 @@ export const GitGraph: React.FC<GitGraphProps> = ({ state, fontSizeMultiplier = 
       return 0;
     };
 
-    // Izračunaj kolone i redove za sve
     commitList.forEach(c => {
       getCol(c.id);
       getRow(c.id);
     });
 
-    // Podesi koordinate (skaliranje)
     const paddingX = 85;
-    const paddingY = 65;
+    const paddingY = 55;
     const startX = 60;
-    const centerY = 150;
+    const centerY = 110;
 
     commitList.forEach(c => {
       const col = memoCol[c.id] || 0;
@@ -115,22 +98,21 @@ export const GitGraph: React.FC<GitGraphProps> = ({ state, fontSizeMultiplier = 
         commit: c
       };
 
-      // Dodaj ivice od roditelja ka detetu (konekcije)
-      c.parentIds.forEach(pId => {
+      c.parentIds.forEach((pId, idx) => {
         if (commits[pId]) {
-          edges.push({ from: pId, to: c.id });
+          edges.push({ from: pId, to: c.id, isMerge: idx > 0 });
         }
       });
     });
 
     return { nodes, edges };
-  }, [commits, branches, remoteBranches]);
+  }, [commits, branches]);
 
-  // Prikupljanje grana koje pokazuju na pojedine commit-e
+  // Sakupljanje oznaka (labels) za svaki commit
   const commitLabels = useMemo(() => {
-    const labels: { [commitId: string]: { name: string; isRemote: boolean; isHead: boolean }[] } = {};
-    
-    // Dodaj lokalne grane
+    const labels: { [commitId: string]: { name: string; isRemote: boolean; isHead: boolean; isTag?: boolean }[] } = {};
+
+    // Lokalne grane
     Object.keys(branches).forEach(bName => {
       const cId = branches[bName];
       if (!cId) return;
@@ -139,23 +121,30 @@ export const GitGraph: React.FC<GitGraphProps> = ({ state, fontSizeMultiplier = 
       labels[cId].push({ name: bName, isRemote: false, isHead });
     });
 
-    // Dodaj prateće remote grane
+    // Remote grane
     if (remoteBranches) {
       Object.keys(remoteBranches).forEach(bName => {
         const cId = remoteBranches[bName];
         if (!cId) return;
         if (!labels[cId]) labels[cId] = [];
-        // Da li HEAD pokazuje direktno na ovo (detached)
-        const isHead = head.type === 'commit' && head.target === cId;
-        // Izbegavamo dupliranje ako već postoji ista lokalna grana sa aktivnim HEAD
         const exists = labels[cId].some(l => l.name === bName);
         if (!exists) {
-          labels[cId].push({ name: bName, isRemote: true, isHead });
+          labels[cId].push({ name: bName, isRemote: true, isHead: false });
         }
       });
     }
 
-    // Provera da li je detached HEAD koji nije vezan za lokalnu granu
+    // Tagovi
+    if (tags) {
+      Object.keys(tags).forEach(tagName => {
+        const cId = tags[tagName];
+        if (!cId) return;
+        if (!labels[cId]) labels[cId] = [];
+        labels[cId].push({ name: `tag: ${tagName}`, isRemote: false, isHead: false, isTag: true });
+      });
+    }
+
+    // Detached HEAD
     if (head.type === 'commit' && head.target) {
       const cId = head.target;
       if (labels[cId]) {
@@ -169,302 +158,261 @@ export const GitGraph: React.FC<GitGraphProps> = ({ state, fontSizeMultiplier = 
     }
 
     return labels;
-  }, [branches, remoteBranches, head]);
+  }, [branches, remoteBranches, tags, head]);
 
   const { nodes, edges } = layout;
   const nodeKeys = Object.keys(nodes);
 
-  // Ukoliko nema commit-a, prikaži retro placeholder
   if (nodeKeys.length === 0) {
-    const isInitialized = Object.keys(branches).length > 0 || head.target !== '';
+    const isInitialized = state.isInitialized === true || Object.keys(branches).length > 0 || head.target !== '';
     if (isInitialized) {
       return (
-        <div style={{
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100%',
+            width: '100%',
+            color: '#333',
+            backgroundColor: '#f0f4fc',
+            padding: '20px',
+            textAlign: 'center',
+            fontFamily: 'Tahoma, sans-serif',
+          }}
+        >
+          <div style={{ fontSize: `${Math.floor(36 * fontSizeMultiplier)}px`, marginBottom: 8 }}>
+            🌱
+          </div>
+          <h4 style={{ fontWeight: 'bold', color: '#1e40af', marginBottom: 6, fontSize: `${Math.max(12, Math.floor(15 * fontSizeMultiplier))}px` }}>
+            Repozitorijum je uspešno inicijalizovan!
+          </h4>
+          <p style={{ fontSize: `${Math.max(10, Math.floor(11.5 * fontSizeMultiplier))}px`, maxWidth: 300, lineHeight: 1.4, color: '#475569' }}>
+            Nalaziš se na grani <strong style={{ color: '#2563eb' }}>main</strong>.<br />
+            Dodaj fajlove sa <code style={{ backgroundColor: '#e2e8f0', padding: '1px 4px', borderRadius: 3 }}>git add .</code> i napravi prvi commit!
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div
+        style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           height: '100%',
           width: '100%',
-          color: '#333',
-          backgroundColor: '#f0f3f9',
+          color: '#666',
+          backgroundColor: '#f8fafc',
           padding: '20px',
           textAlign: 'center',
-          fontFamily: '"Tahoma", sans-serif'
-        }}>
-          <div style={{
-            fontSize: `${Math.floor(48 * fontSizeMultiplier)}px`,
-            marginBottom: '15px',
-            filter: 'drop-shadow(1px 2px 2px rgba(0,0,0,0.15))'
-          }}>🌿</div>
-          <h4 style={{ fontWeight: 'bold', color: '#224488', marginBottom: '8px', fontSize: `${Math.max(12, Math.floor(16 * fontSizeMultiplier))}px` }}>
-            Repozitorijum je uspešno inicijalizovan!
-          </h4>
-          <p style={{ fontSize: `${Math.max(10, Math.floor(12.5 * fontSizeMultiplier))}px`, maxWidth: '320px', lineHeight: '1.4', color: '#555' }}>
-            Nalazite se na grani <strong style={{ color: '#245ddb' }}>master</strong>.<br/>
-            Kreirajte svoj prvi commit kako biste započeli crtanje vizuelnog grafa!
-          </p>
-          <div style={{
-            marginTop: '15px',
-            padding: '10px',
-            backgroundColor: '#ffffe1',
-            border: '1px solid #d4d0c8',
-            borderRadius: '4px',
-            fontSize: `${Math.max(9, Math.floor(11.5 * fontSizeMultiplier))}px`,
-            color: '#000',
-            textAlign: 'left',
-            fontFamily: 'monospace',
-            boxShadow: '1px 1px 3px rgba(0,0,0,0.1)'
-          }}>
-            1. git add readme.txt<br/>
-            2. git commit -m "Moj prvi commit"
-          </div>
+          fontFamily: 'Tahoma, sans-serif',
+        }}
+      >
+        <div style={{ fontSize: `${Math.floor(36 * fontSizeMultiplier)}px`, marginBottom: 8 }}>
+          📁
         </div>
-      );
-    }
-
-    return (
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100%',
-        width: '100%',
-        color: '#666',
-        backgroundColor: '#f6f9fc',
-        padding: '20px',
-        textAlign: 'center'
-      }}>
-        <div style={{
-          fontSize: `${Math.floor(36 * fontSizeMultiplier)}px`,
-          marginBottom: '15px',
-          filter: 'drop-shadow(1px 1px 1px rgba(0,0,0,0.2))'
-        }}>📁</div>
-        <h4 style={{ fontWeight: 'bold', color: '#224488', marginBottom: '8px', fontSize: `${Math.max(12, Math.floor(16 * fontSizeMultiplier))}px` }}>Repozitorijum nije inicijalizovan</h4>
-        <p style={{ fontSize: `${Math.max(10, Math.floor(12 * fontSizeMultiplier))}px`, maxWidth: '300px' }}>
-          Ukucajte <code style={{ backgroundColor: '#eef3fd', padding: '2px 4px', borderRadius: '3px', color: '#c7254e', fontWeight: 'bold' }}>git init</code> u terminal sa desne strane da započnete učenje!
+        <h4 style={{ fontWeight: 'bold', color: '#1e3a8a', marginBottom: 6, fontSize: `${Math.max(12, Math.floor(14.5 * fontSizeMultiplier))}px` }}>
+          Repozitorijum nije inicijalizovan
+        </h4>
+        <p style={{ fontSize: `${Math.max(10, Math.floor(11 * fontSizeMultiplier))}px`, maxWidth: 280, color: '#64748b' }}>
+          Ukucaj <code style={{ backgroundColor: '#e2e8f0', color: '#b91c1c', fontWeight: 'bold', padding: '2px 4px', borderRadius: 3 }}>git init</code> u terminal dole da započneš praćenje projekta <strong>Kafić Luna</strong>.
         </p>
       </div>
     );
   }
 
-  // Računanje širine i visine SVG platna na osnovu koordinata
-  const maxX = Math.max(...nodeKeys.map(k => nodes[k].x), 400) + 120;
-  const minY = Math.min(...nodeKeys.map(k => nodes[k].y), 100) - 80;
-  const maxY = Math.max(...nodeKeys.map(k => nodes[k].y), 220) + 100;
-  const height = maxY - minY;
+  // Calculate SVG bounds
+  const maxX = Math.max(...Object.values(nodes).map(n => n.x), 350) + 90;
+  const minY = Math.min(...Object.values(nodes).map(n => n.y), 40) - 40;
+  const maxY = Math.max(...Object.values(nodes).map(n => n.y), 160) + 60;
+  const svgHeight = Math.max(maxY - minY + 30, 220);
 
   return (
-    <div style={{
-      width: '100%',
-      height: '100%',
-      overflow: 'auto',
-      backgroundColor: '#f0f3f9',
-      border: '1px inset #808080',
-      position: 'relative'
-    }}>
-      {/* Retro Grid Background */}
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundImage: 'radial-gradient(#ccd5e8 1px, transparent 1px)',
-        backgroundSize: '20px 20px',
-        pointerEvents: 'none'
-      }} />
-
-      <svg
-        width={maxX}
-        height={height}
-        viewBox={`0 ${minY} ${maxX} ${height}`}
-        style={{ position: 'relative', zIndex: 1, display: 'block' }}
-      >
-        {/* Defs za strelice i stilove */}
+    <div
+      style={{
+        position: 'relative',
+        width: '100%',
+        height: '100%',
+        overflow: 'auto',
+        backgroundColor: '#ffffff',
+        fontFamily: 'Tahoma, Arial, sans-serif',
+      }}
+    >
+      <svg width={maxX} height={svgHeight} style={{ minWidth: '100%', minHeight: '100%' }}>
         <defs>
-          <marker
-            id="arrow"
-            viewBox="0 0 10 10"
-            refX="6"
-            refY="5"
-            markerWidth="6"
-            markerHeight="6"
-            orient="auto-start-reverse"
-          >
-            <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#728dbb" />
-          </marker>
-          
+          <linearGradient id="mainGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#3b82f6" />
+            <stop offset="100%" stopColor="#1d4ed8" />
+          </linearGradient>
+          <linearGradient id="menuGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#10b981" />
+            <stop offset="100%" stopColor="#047857" />
+          </linearGradient>
+          <linearGradient id="contactGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#a855f7" />
+            <stop offset="100%" stopColor="#7e22ce" />
+          </linearGradient>
           <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur in="SourceAlpha" stdDeviation="1.5" />
-            <feOffset dx="1" dy="1.5" />
-            <feComponentTransfer><feFuncA type="linear" slope="0.3" /></feComponentTransfer>
-            <feMerge>
-              <feMergeNode />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
+            <feDropShadow dx="1" dy="2" stdDeviation="2" floodOpacity="0.2" />
           </filter>
         </defs>
 
-        {/* Iscrtavanje konekcionih linija (Edges) - zakrivljeni Bezier kablovi */}
-        {edges.map((edge, idx) => {
-          const fromNode = nodes[edge.from];
-          const toNode = nodes[edge.to];
+        {/* Edges / Connections between commits */}
+        {edges.map((e, idx) => {
+          const fromNode = nodes[e.from];
+          const toNode = nodes[e.to];
           if (!fromNode || !toNode) return null;
 
-          // Crtamo od deteta (desno) ka roditelju (levo)
-          const startX = toNode.x - 18; // blago pomereno ka obodu
-          const startY = toNode.y;
-          const endX = fromNode.x + 18;
-          const endY = fromNode.y;
+          const isCurve = fromNode.y !== toNode.y;
+          const strokeColor = e.isMerge ? '#8b5cf6' : (fromNode.row === 1 ? '#10b981' : (fromNode.row === -1 ? '#a855f7' : '#3b82f6'));
 
-          // Bezier kontrolne tačke za glatku horizontalnu S-krivu
-          const cp1X = startX - 25;
-          const cp1Y = startY;
-          const cp2X = endX + 25;
-          const cp2Y = endY;
+          if (isCurve) {
+            const midX = (fromNode.x + toNode.x) / 2;
+            const pathData = `M ${fromNode.x} ${fromNode.y} C ${midX} ${fromNode.y}, ${midX} ${toNode.y}, ${toNode.x} ${toNode.y}`;
+            return (
+              <path
+                key={`edge-${idx}`}
+                d={pathData}
+                fill="none"
+                stroke={strokeColor}
+                strokeWidth={e.isMerge ? 3 : 2.5}
+                strokeDasharray={e.isMerge ? '4 2' : 'none'}
+              />
+            );
+          }
 
           return (
-            <path
+            <line
               key={`edge-${idx}`}
-              d={`M ${startX} ${startY} C ${cp1X} ${cp1Y}, ${cp2X} ${cp2Y}, ${endX} ${endY}`}
-              fill="none"
-              stroke="#728dbb"
-              strokeWidth="2.5"
-              markerEnd="url(#arrow)"
-              strokeDasharray={toNode.commit.isRemote ? "4,4" : "none"}
+              x1={fromNode.x}
+              y1={fromNode.y}
+              x2={toNode.x}
+              y2={toNode.y}
+              stroke={strokeColor}
+              strokeWidth={2.5}
             />
           );
         })}
 
-        {/* Iscrtavanje Commit čvorova */}
-        {nodeKeys.map(id => {
-          const node = nodes[id];
-          const labels = commitLabels[id] || [];
-          const isHEADNode = labels.some(l => l.isHead);
-          const isRemoteOnly = node.commit.isRemote;
+        {/* Nodes / Commits */}
+        {nodeKeys.map(cId => {
+          const node = nodes[cId];
+          const labels = commitLabels[cId] || [];
+          const isCurrentHead = labels.some(l => l.isHead);
+          const hasTag = labels.some(l => l.isTag);
+
+          let nodeFill = 'url(#mainGrad)';
+          if (node.row === 1) nodeFill = 'url(#menuGrad)';
+          if (node.row === -1) nodeFill = 'url(#contactGrad)';
+          if (node.commit.parentIds.length > 1) nodeFill = '#7c3aed';
 
           return (
-            <g key={`node-${id}`} filter="url(#shadow)">
-              {/* Pulsirajući oreol za HEAD čvor */}
-              {isHEADNode && (
+            <g key={`node-${cId}`} filter="url(#shadow)">
+              {/* Active HEAD Halo */}
+              {isCurrentHead && (
                 <circle
                   cx={node.x}
                   cy={node.y}
-                  r="24"
+                  r={19}
                   fill="none"
-                  stroke="#38a169"
-                  strokeWidth="2"
-                  strokeDasharray="3,3"
-                  opacity="0.8"
-                >
-                  <animate
-                    attributeName="transform"
-                    type="rotate"
-                    from="0"
-                    to="360"
-                    dur="10s"
-                    repeatCount="indefinite"
-                  />
-                </circle>
+                  stroke="#fbbf24"
+                  strokeWidth={2.5}
+                  strokeDasharray="4 2"
+                />
               )}
 
-              {/* Spoljašnji prsten / Commit krug */}
+              {/* Commit Circle */}
               <circle
                 cx={node.x}
                 cy={node.y}
-                r="16"
-                fill={isRemoteOnly ? "#fff0f0" : "#2b73db"}
-                stroke={isHEADNode ? "#38a169" : (isRemoteOnly ? "#e53e3e" : "#002e80")}
-                strokeWidth={isHEADNode ? "3" : "2"}
-                style={{ cursor: 'pointer', transition: 'all 0.2s ease' }}
+                r={14}
+                fill={nodeFill}
+                stroke="#ffffff"
+                strokeWidth={2}
+                cursor="pointer"
               />
 
-              {/* ID commit-a (C0, C1, C2...) */}
+              {/* Commit ID Label */}
               <text
                 x={node.x}
                 y={node.y + 4}
-                textAnchor="middle"
-                fill={isRemoteOnly ? "#e53e3e" : "#ffffff"}
-                fontSize={Math.max(8, Math.floor(11 * fontSizeMultiplier))}
+                fill="#ffffff"
+                fontSize={10}
                 fontWeight="bold"
-                style={{ pointerEvents: 'none', fontFamily: '"Share Tech Mono", monospace' }}
+                textAnchor="middle"
+                pointerEvents="none"
               >
-                {id}
+                {cId}
               </text>
 
-              {/* Commit poruka lebdi iznad kruga */}
-              <title>{`${id}: ${node.commit.message}`}</title>
+              {/* Branch / Tag Badges */}
+              {labels.map((lbl, lIdx) => {
+                const badgeY = node.y - 22 - lIdx * 19;
+                const isHead = lbl.isHead;
+                const isTag = lbl.isTag;
+                const isRemote = lbl.isRemote;
+
+                let badgeBg = '#2563eb';
+                if (lbl.name.includes('meni')) badgeBg = '#059669';
+                if (lbl.name.includes('kontakt')) badgeBg = '#7c3aed';
+                if (isRemote) badgeBg = '#d97706';
+                if (isTag) badgeBg = '#0891b2';
+                if (lbl.name === 'HEAD') badgeBg = '#dc2626';
+
+                return (
+                  <g key={`lbl-${cId}-${lIdx}`}>
+                    <rect
+                      x={node.x - 30}
+                      y={badgeY - 11}
+                      width={60}
+                      height={15}
+                      rx={3}
+                      fill={badgeBg}
+                      stroke={isHead ? '#fbbf24' : '#ffffff'}
+                      strokeWidth={isHead ? 1.5 : 0.8}
+                    />
+                    <text
+                      x={node.x}
+                      y={badgeY}
+                      fill="#ffffff"
+                      fontSize={9}
+                      fontWeight="bold"
+                      textAnchor="middle"
+                    >
+                      {lbl.name.length > 9 ? `${lbl.name.substring(0, 8)}…` : lbl.name}
+                    </text>
+                  </g>
+                );
+              })}
+
+              {/* Commit Message snippet below */}
               <text
                 x={node.x}
-                y={node.y + Math.max(22, Math.floor(30 * fontSizeMultiplier))}
+                y={node.y + 24}
+                fill="#475569"
+                fontSize={9.5}
                 textAnchor="middle"
-                fill="#4a5568"
-                fontSize={Math.max(7, Math.floor(9 * fontSizeMultiplier))}
                 fontWeight="500"
-                style={{ pointerEvents: 'none' }}
               >
-                {node.commit.message.length > 15 
-                  ? node.commit.message.substring(0, 12) + "..." 
+                {node.commit.message.length > 14
+                  ? `${node.commit.message.substring(0, 13)}…`
                   : node.commit.message}
               </text>
-
-              {/* Iscrtavanje zastavica za grane koje pokazuju na ovaj commit */}
-              {labels.length > 0 && (
-                <g transform={`translate(${node.x}, ${node.y - Math.max(20, Math.floor(25 * fontSizeMultiplier))})`}>
-                  {labels.map((label, lIdx) => {
-                    const flagHeight = Math.max(12, Math.floor(16 * fontSizeMultiplier));
-                    const flagY = -lIdx * (flagHeight + 4);
-                    const isRemote = label.isRemote;
-                    const isHead = label.isHead;
-                    
-                    // Određivanje boja zastavice
-                    let bgColor = '#b3d1ff'; // svetlo plava
-                    let borderColor = '#0e3092';
-                    let textColor = '#002e80';
-
-                    if (isRemote) {
-                      bgColor = '#ffd1d1'; // svetlo crvena
-                      borderColor = '#a30000';
-                      textColor = '#800000';
-                    }
-                    if (isHead) {
-                      bgColor = '#d2f4d2'; // svetlo zelena
-                      borderColor = '#1e5a1e';
-                      textColor = '#0f3a0f';
-                    }
-
-                    const flagText = label.name + (isHead ? ' *' : '');
-                    const labelWidth = Math.max(30, Math.floor((flagText.length * 6 + 14) * fontSizeMultiplier));
-
-                    return (
-                      <g key={`label-${lIdx}`} transform={`translate(${-labelWidth / 2}, ${flagY})`}>
-                        {/* Zastavica */}
-                        <rect
-                          width={labelWidth}
-                          height={flagHeight}
-                          rx="3"
-                          ry="3"
-                          fill={bgColor}
-                          stroke={borderColor}
-                          strokeWidth="1.5"
-                        />
-                        <text
-                          x={labelWidth / 2}
-                          y={Math.max(9, Math.floor(11 * fontSizeMultiplier))}
-                          textAnchor="middle"
-                          fontSize={Math.max(7, Math.floor(9 * fontSizeMultiplier))}
-                          fontWeight="bold"
-                          fill={textColor}
-                          style={{ fontFamily: '"Tahoma", "Outfit", sans-serif' }}
-                        >
-                          {flagText}
-                        </text>
-                      </g>
-                    );
-                  })}
-                </g>
+              {hasTag && (
+                <text
+                  x={node.x}
+                  y={node.y + 35}
+                  fill="#0891b2"
+                  fontSize={8.5}
+                  fontWeight="bold"
+                  textAnchor="middle"
+                >
+                  🏷️ release
+                </text>
               )}
             </g>
           );

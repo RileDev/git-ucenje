@@ -2,785 +2,1043 @@ import { type RepoState } from './gitEngine';
 
 export interface Level {
   id: number;
+  levelNumber: 1 | 2 | 3;
+  lessonNumber: number | string;
   title: string;
   category: string;
+  isReadingOnly?: boolean;
+  story: string;
+  whyItMatters: string;
+  task: string;
+  hint1: string;
+  hint2: string;
+  expectedResult: string;
+  quickOverview: string;
   description: string;
-  hint: string;
   initialState: RepoState;
-  validate: (state: RepoState) => boolean;
+  validate: (state: RepoState, commandsRun?: string[]) => boolean;
   expectedCommands: string[];
+  livePreview?: {
+    hasAbout?: boolean;
+    hasMenu?: boolean;
+    hasContact?: boolean;
+    isStyleBroken?: boolean;
+    isConflict?: boolean;
+    hasFavicon?: boolean;
+    tag?: string;
+  };
 }
 
 export const levels: Level[] = [
+  // ═══════════════════════════════════════════════════════════════════════════
+  // NIVO 1: OSNOVE — KAFIC LUNA (10 LEKCIJA)
+  // ═══════════════════════════════════════════════════════════════════════════
   {
     id: 1,
-    title: "Prvi koraci: Inicijalizacija i prvi commit",
-    category: "Osnove",
-    description: `### Dobrodošli u svet Git-a!
-Git je distribuirani sistem za kontrolu verzija (DVCS) koji je 2005. godine stvorio Linus Torvalds za potrebe razvoja Linux jezgra.
+    levelNumber: 1,
+    lessonNumber: 0,
+    title: "Lekcija 0: Šta je Git i zašto ga koristimo",
+    category: "Nivo 1: Osnove",
+    isReadingOnly: true,
+    story: "Zamisli da pišeš esej u Word-u i svaki put kad napraviš veću izmenu, snimiš kopiju kao esej_final.docx, pa esej_final2.docx, pa esej_STVARNO_final.docx. Radi — ali je haotično, i ne znaš tačno šta se promenilo između verzija.",
+    whyItMatters: "Git rešava taj problem za kod. To je sistem koji pamti svaku sačuvanu verziju tvog projekta — ne kao gomilu foldera, već kao urednu istoriju snimaka (zovu se commit-ovi), sa jasnim opisom šta je promenjeno i kada. U vibecoding-u posebno: kad AI napiše/izmeni gomilu koda za tebe, Git ti daje 'undo dugme' i način da vidiš tačno šta se promenilo pre nego što to prihvatiš.",
+    task: "Pročitaj uvodno objašnjenje i upoznaj se sa radnim prozorima na radnoj površini. Kada si spreman/na, klikni na dugme 'Sledeći nivo' ispod!",
+    hint1: "Ovo je konceptualna lekcija za čitanje. Nema kucanja komandi u terminalu.",
+    hint2: "Klikni na dugme 'Sledeći nivo 🔓' ispod ovog uputstva da pređeš na Lekciju 1.",
+    expectedResult: "Upoznavanje sa 4 radna prozora: Lekcija, Git Graf, Folder Projekta i Terminal.",
+    quickOverview: "Git — distribuirani sistem za kontrolu verzija koji čuva istoriju projekta.",
+    description: `### Dobrodošli u projekat "Kafić Luna"!
 
-U Git-u, projekat se prati unutar **repozitorijuma**. Repozitorijum je zapravo skriveni direktorijum pod nazivom \`.git\` u korenu vašeg projekta koji sadrži sve metapodatke, objekte i istoriju promena.
+Zamisli da pišeš esej u Word-u i svaki put kad napraviš veću izmenu, snimiš kopiju kao \`esej_final.docx\`, pa \`esej_final2.docx\`, pa \`esej_STVARNO_final.docx\`. Radi — ali je haotično, i ne znaš tačno šta se promenilo između verzija.
 
-Glavne operacije koje ćemo savladati u ovom nivou su:
-*   \`git init\` - Kreira novi prazan lokalni repozitorijum (pravi \`.git\` folder).
-*   \`git add <fajl>\` - Dodaje fajl u pripremnu zonu (indeks ili staging area).
-*   \`git commit -m "poruka"\` - Trajno beleži stanje iz pripremne zone u istoriju kao novu "vremensku kapsulu" (commit objekat).
+**Git** rešava taj problem za kod. To je sistem koji pamti *svaku* sačuvanu verziju tvog projekta — ne kao gomilu foldera, već kao urednu istoriju snimaka (zovu se **commit-ovi**), sa jasnim opisom šta je promenjeno i kada.
 
-**Tvoj zadatak:**
-1. Inicijalizuj repozitorijum pomoću komande \`git init\`.
-2. Primetićeš da se pojavio fajl \`readme.txt\`. Dodaj ga u pripremnu zonu pomoću \`git add readme.txt\`.
-3. Napravi svoj prvi commit sa porukom po izboru koristeći \`git commit -m "Moj prvi commit"\`.`,
-    hint: "Ukucaj redom:\n1. `git init`\n2. `git add readme.txt`\n3. `git commit -m \"Moj prvi commit\"`",
+Napravio ga je 2005. Linus Torvalds, tvorac Linux-a, jer mu je trebao alat koji hiljade programera može da koristi *istovremeno* na istom projektu bez haosa.
+
+**Zašto je bitan tebi, danas:**
+*   Možeš da eksperimentišeš slobodno — ako nešto pokvariš, uvek se vraćaš na verziju koja je radila.
+*   Ako radiš sa timom (ili AI asistentom), Git ti tačno pokazuje ko je šta i kada promenio.
+*   U **vibecoding-u** posebno: kad AI napiše/izmeni gomilu koda za tebe, Git ti daje "undo dugme" i način da vidiš tačno šta se promenilo pre nego što to prihvatiš.
+
+**Tri zone u kojima tvoj kod "putuje":**
+<div class="xp-flow-container">
+  <div class="xp-flow-step">
+    <span class="xp-flow-icon">📁</span>
+    <strong>Radni direktorijum</strong>
+    <small>(fajlovi na disku)</small>
+  </div>
+  <div class="xp-flow-arrow">➔</div>
+  <div class="xp-flow-step">
+    <span class="xp-flow-icon">⏳</span>
+    <strong>Staging zona (index)</strong>
+    <small>("spremno za commit")</small>
+  </div>
+  <div class="xp-flow-arrow">➔</div>
+  <div class="xp-flow-step">
+    <span class="xp-flow-icon">💾</span>
+    <strong>Repozitorijum</strong>
+    <small>(istorija commit-ova)</small>
+  </div>
+</div>
+
+Kroz ceo ovaj nivo pratićeš radne prozore na radnoj površini:
+*   **Dokument Lekcije** — uputstvo i cilj
+*   **Projekat: kafic-luna** — pravi fajlovi tvog sajta sa statusima
+*   **Terminal** — gde kucaš Git komande
+*   **Vizuelni Git Graf** — grafički prikaz istorije commit-ova
+*   **Live Web Pregledač** — sajt Kafić Luna uživo!`,
     initialState: {
+      isInitialized: false,
       commits: {},
       branches: {},
-      head: { type: 'commit', target: '' },
+      head: { type: 'branch', target: '' },
       index: { staged: [], deleted: [] },
       workingDirectory: {
-        files: [],
+        files: ['index.html', 'style.css', 'script.js'],
         modified: [],
-        untracked: []
+        untracked: ['index.html', 'style.css', 'script.js'],
+        ignored: []
       },
       hasRemote: false
     },
-    validate: (state: RepoState) => {
-      const commitIds = Object.keys(state.commits);
-      return (
-        commitIds.length > 0 &&
-        state.head.type === 'branch' &&
-        state.head.target === 'master' &&
-        state.branches['master'] === commitIds[0]
-      );
-    },
-    expectedCommands: ["git init", "git add", "git commit"]
+    validate: () => true,
+    expectedCommands: [],
+    livePreview: { hasAbout: false, hasMenu: false, hasContact: false }
   },
   {
     id: 2,
-    title: "Pripremna zona i status repozitorijuma",
-    category: "Osnove",
-    description: `### Praćenje sadržaja i git status
-Jedna od ključnih osobenosti Git-a je to što **on ne prati fajlove, već sadržaj**. Izmene se moraju eksplicitno dodati u pripremnu zonu (index) pre snimanja (commit-a).
+    levelNumber: 1,
+    lessonNumber: 1,
+    title: "Lekcija 1: git init",
+    category: "Nivo 1: Osnove",
+    story: "Otvaraš `kafic-luna/` folder prvi put. Unutra su `index.html`, `style.css` i `script.js` — sajt već postoji, ali ne postoji nikakva Git istorija. Nema `.git` foldera, nema commit-ova, ništa se ne prati.",
+    whyItMatters: "Bez ovog koraka, Git ne 'vidi' tvoj projekat uopšte — sve ostale komande iz ovog nivoa jednostavno neće raditi. Ovo je korak koji radiš tačno jednom, na samom početku života jednog projekta.",
+    task: "Pokreni Git praćenje za ovaj folder, tako da Git počne da beleži šta se u njemu dešava.",
+    hint1: "Kako bi na engleskom nazvao/la radnju kojom nešto tek započinješ, inicijalizuješ?",
+    hint2: "git init",
+    expectedResult: "U Projekat prozoru pojavljuje se skriveni .git folder. Vizuelni Git Graf menja poruku iz 'Repozitorijum nije inicijalizovan' u prazan graf na grani main. Terminal ispisuje potvrdu da je prazan repozitorijum kreiran.",
+    quickOverview: "git init — pretvara trenutni folder u Git repozitorijum.",
+    description: `### Priča
+Otvaraš \`kafic-luna/\` folder prvi put. Unutra su \`index.html\`, \`style.css\` i \`script.js\` — sajt već postoji, ali ne postoji nikakva Git istorija. Nema \`.git\` foldera, nema commit-ova, ništa se ne prati.
 
-Komanda \`git status\` je tvoj najbolji prijatelj. Ona prikazuje:
-1.  Na kojoj se grani trenutno nalaziš.
-2.  Koji fajlovi su izmenjeni ali još nisu pripremljeni (Changes not staged for commit).
-3.  Koji fajlovi su novi i uopšte se ne prate (Untracked files).
-4.  Koji fajlovi su pripremljeni i čeka se njihovo snimanje (Changes to be committed).
-
-**Tvoj zadatak:**
-U radnom direktorijumu se nalazi novi fajl \`glavna.py\`.
-1.  Pogledaj status repozitorijuma sa \`git status\`.
-2.  Pripremi fajl \`glavna.py\` za commit koristeći \`git add glavna.py\`.
-3.  Snimi promene sa porukom "Dodat program" koristeći \`git commit -m "Dodat program"\`.`,
-    hint: "Iskoristi `git status` da osmotriš fajlove, a zatim unesi:\n1. `git add glavna.py`\n2. `git commit -m \"Dodat program\"`",
+### Zašto je ovo bitno
+Bez ovog koraka, Git ne "vidi" tvoj projekat uopšte — sve ostale komande iz ovog nivoa jednostavno neće raditi. Ovo je korak koji radiš **tačno jednom**, na samom početku života jednog projekta.`,
     initialState: {
-      commits: {
-        C0: { id: 'C0', parentIds: [], message: 'Inicijalni commit' }
-      },
-      branches: { master: 'C0' },
-      head: { type: 'branch', target: 'master' },
+      isInitialized: false,
+      commits: {},
+      branches: {},
+      head: { type: 'branch', target: '' },
       index: { staged: [], deleted: [] },
       workingDirectory: {
-        files: ['readme.txt'],
+        files: ['index.html', 'style.css', 'script.js'],
         modified: [],
-        untracked: ['glavna.py']
+        untracked: ['index.html', 'style.css', 'script.js'],
+        ignored: []
       },
+      hasRemote: false
+    },
+    validate: (state: RepoState) => {
+      return state.isInitialized === true || state.branches['main'] !== undefined || state.head.target === 'main';
+    },
+    expectedCommands: ["git init"],
+    livePreview: { hasAbout: false, hasMenu: false, hasContact: false }
+  },
+  {
+    id: 3,
+    levelNumber: 1,
+    lessonNumber: 2,
+    title: "Lekcija 2: git status",
+    category: "Nivo 1: Osnove",
+    story: "Repozitorijum postoji, ali `index.html`, `style.css` i `script.js` su i dalje tu, potpuno nepromenjeni. Pitanje je: da li ih Git uopšte 'vidi'?",
+    whyItMatters: "git status je komanda koju ćeš kucati najčešće od svih — pre svakog sledećeg koraka, dobra je navika proveriti šta se tačno dešava u projektu, umesto da nagađaš.",
+    task: "Proveri kako Git trenutno vidi tvoj projekat — koje fajlove je primetio, i u kom su stanju.",
+    hint1: "Koja komanda ti daje 'stanje' ili 'status' projekta, bez da bilo šta menja?",
+    hint2: "git status",
+    expectedResult: "Terminal prikazuje sva tri fajla pod Untracked files (crvenom bojom) — Git ih vidi na disku, ali ih još ne prati.",
+    quickOverview: "git status — prikazuje stanje radnog direktorijuma i staging zone.",
+    description: `### Priča
+Repozitorijum postoji, ali \`index.html\`, \`style.css\` i \`script.js\` su i dalje tu, potpuno nepromenjeni. Pitanje je: da li ih Git uopšte "vidi"?
+
+### Zašto je ovo bitno
+\`git status\` je komanda koju ćeš kucati **najčešće od svih** — pre svakog sledećeg koraka, dobra je navika proveriti šta se tačno dešava u projektu, umesto da nagađaš.`,
+    initialState: {
+      isInitialized: true,
+      commits: {},
+      branches: { main: '' },
+      head: { type: 'branch', target: 'main' },
+      index: { staged: [], deleted: [] },
+      workingDirectory: {
+        files: ['index.html', 'style.css', 'script.js'],
+        modified: [],
+        untracked: ['index.html', 'style.css', 'script.js'],
+        ignored: []
+      },
+      hasRemote: false
+    },
+    validate: (_state: RepoState, commandsRun = []) => {
+      return commandsRun.some(c => c.toLowerCase().includes('status'));
+    },
+    expectedCommands: ["git status"],
+    livePreview: { hasAbout: false, hasMenu: false, hasContact: false }
+  },
+  {
+    id: 4,
+    levelNumber: 1,
+    lessonNumber: 3,
+    title: "Lekcija 3: .gitignore",
+    category: "Nivo 1: Osnove",
+    story: "Dok si radio/la na sajtu, primetio/la si da je neko već napravio .gitignore u koji je stavio node_modules/ i .DS_Store. Međutim, zaboravljeno je ono najbitnije: secrets.txt koji sadrži tajni API ključ i nikada ne sme da dospe u Git istoriju!",
+    whyItMatters: ".gitignore je živi fajl koji stalno dopunjujemo novim pravilima. Kada god dodamo konfiguracione fajlove sa lozinkama ili tokenima (npr. secrets.txt, .env), moramo ih upisati u .gitignore pre nego što napravimo commit.",
+    task: "1. Otvori .gitignore fajl u File Exploreru (klikom na ikonicu .gitignore).\n2. Klikni na dugme 'Uredi', dopiši 'secrets.txt' u novom redu i klikni 'Sačuvaj'.\n3. Pokreni 'git status' u terminalu i potvrdi da je secrets.txt uspešno sakriven!",
+    hint1: "Klikni na .gitignore u prozoru 'Projekat: kafic-luna'. Pritisni 'Uredi', u novom redu dopiši secrets.txt i klikni 'Sačuvaj'.",
+    hint2: "U File Exploreru klikni na .gitignore -> 'Uredi' -> dopiši secrets.txt -> 'Sačuvaj'. Zatim u terminalu pokreni 'git status'.",
+    expectedResult: "git status više ne prikazuje secrets.txt pod Untracked files — Git ga sada trajno ignoriše.",
+    quickOverview: ".gitignore — fajl sa listom putanja/obrazaca koje Git treba da ignoriše.",
+    description: `### Priča
+Dok si radio/la na sajtu, primetio/la si da je neko već napravio \`.gitignore\` u koji je stavio \`node_modules/\` i \`.DS_Store\`.
+
+Međutim, zaboravljeno je ono najbitnije: **\`secrets.txt\`** koji sadrži privatni API ključ i nikada ne sme da dospe u Git istoriju!
+
+### Zašto je ovo bitno
+\`.gitignore\` je živi fajl koji stalno dopunjujemo. Ako zaboraviš da sakriješ fajlove sa lozinkama i API ključevima, oni ostaju trajno zabeleženi u istoriji commit-ova čak i ako ih kasnije obrišeš.`,
+    initialState: {
+      isInitialized: true,
+      commits: {},
+      branches: { main: '' },
+      head: { type: 'branch', target: 'main' },
+      index: { staged: [], deleted: [] },
+      workingDirectory: {
+        files: ['index.html', 'style.css', 'script.js', '.gitignore', 'node_modules', 'secrets.txt', '.DS_Store'],
+        modified: [],
+        untracked: ['index.html', 'style.css', 'script.js', 'secrets.txt'],
+        ignored: ['node_modules', '.DS_Store']
+      },
+      fileContents: {
+        '.gitignore': "node_modules/\n.DS_Store\n",
+        'secrets.txt': "EMAIL_API_KEY=\"sk_live_kaficluna_9823471029834\"\nSMTP_PASSWORD=\"super_secret_cafe_pass\"\n"
+      },
+      gitignorePatterns: ['node_modules/', '.DS_Store'],
+      hasRemote: false
+    },
+    validate: (state: RepoState, commandsRun = []) => {
+      const hasSecrets =
+        state.gitignorePatterns?.some(p => p.includes('secrets.txt')) ||
+        state.fileContents?.['.gitignore']?.includes('secrets.txt');
+      const hasRanStatus = commandsRun.some(c => c.toLowerCase().includes('status'));
+      return Boolean(hasSecrets && hasRanStatus);
+    },
+    expectedCommands: ["git status"],
+    livePreview: { hasAbout: false, hasMenu: false, hasContact: false }
+  },
+  {
+    id: 5,
+    levelNumber: 1,
+    lessonNumber: 4,
+    title: "Lekcija 4: git diff",
+    category: "Nivo 1: Osnove",
+    story: "Radoznao/la si — želiš da vidiš tačno šta se promenilo u projektu pre nego što bilo šta uradiš. Pokrećeš git diff na index.html, style.css i script.js, koji su i dalje netaknuti od pre.",
+    whyItMatters: "git diff ti pokazuje tačne linije koje su dodate ili obrisane pre nego što ih trajno sačuvaš. Posebno u vibecoding-u kad AI asistent izmeni kod, diff ti daje priliku da vidiš tačno šta se menja.",
+    task: "Pokreni komandu koja poredi trenutno stanje fajlova sa onim što je Git poslednje zapamtio, i obrati pažnju na rezultat.",
+    hint1: "Koja komanda pokazuje 'razliku' između radnog direktorijuma i onoga što Git trenutno prati?",
+    hint2: "git diff",
+    expectedResult: "Terminal ispisuje prazan rezultat — jer git diff poredi samo fajlove koje Git već prati (tracked). Pošto još ništa nije dodato, nema šta da uporedi.",
+    quickOverview: "git diff — prikazuje razlike u fajlovima koje Git već prati, a koje još nisu dodate u staging zonu.",
+    description: `### Priča
+Radoznao/la si — želiš da vidiš tačno šta se promenilo u projektu pre nego što bilo šta uradiš. Pokrećeš \`git diff\` na \`index.html\`, \`style.css\` i \`script.js\`, koji su i dalje netaknuti od pre.
+
+### Zašto je ovo bitno
+\`git diff\` ti pokazuje **tačne linije** koje su dodate ili obrisane, pre nego što ih trajno sačuvaš. U vibecoding-u — kad AI asistent izmeni gomilu koda za tebe, \`diff\` ti daje priliku da vidiš tačno šta se menja red po red.`,
+    initialState: {
+      isInitialized: true,
+      commits: {},
+      branches: { main: '' },
+      head: { type: 'branch', target: 'main' },
+      index: { staged: [], deleted: [] },
+      workingDirectory: {
+        files: ['index.html', 'style.css', 'script.js', '.gitignore'],
+        modified: [],
+        untracked: ['index.html', 'style.css', 'script.js', '.gitignore'],
+        ignored: ['node_modules/', 'secrets.txt', '.DS_Store']
+      },
+      gitignorePatterns: ['node_modules/', 'secrets.txt', '.DS_Store'],
+      hasRemote: false
+    },
+    validate: (_state: RepoState, commandsRun = []) => {
+      return commandsRun.some(c => c.toLowerCase().includes('diff'));
+    },
+    expectedCommands: ["git diff"],
+    livePreview: { hasAbout: false, hasMenu: false, hasContact: false }
+  },
+  {
+    id: 6,
+    levelNumber: 1,
+    lessonNumber: 5,
+    title: "Lekcija 5: git add .",
+    category: "Nivo 1: Osnove",
+    story: "Sad znaš zašto je diff bio prazan — Git još ništa ne prati. Vreme je da mu kažeš: 'prati ove fajlove, spremni su za sledeći commit.'",
+    whyItMatters: "Staging zona (index) je Git-ova 'čekaonica' — mesto gde biraš tačno šta ide u sledeći commit. Tačka (.) znači 'sve izmene u ovom folderu i podfolderima'.",
+    task: "Pripremi sve trenutne fajlove projekta odjednom za sledeći commit.",
+    hint1: "Koja komanda 'dodaje' fajlove u staging zonu? A šta bi mogla da znači tačka (.) umesto imena fajla?",
+    hint2: "git add .",
+    expectedResult: "git status sada prikazuje fajlove pod Changes to be committed (zelenom bojom) umesto crvene. Fajlovi su staged u Folderu Projekta.",
+    quickOverview: "git add . — dodaje sve izmene iz radnog direktorijuma u staging zonu.",
+    description: `### Priča
+Sad znaš zašto je diff bio prazan — Git još ništa ne prati. Vreme je da mu kažeš: "prati ove fajlove, spremni su za sledeći commit."
+
+### Zašto je ovo bitno
+Staging zona (index) je Git-ova "čekaonica" — mesto gde biraš *tačno* šta ide u sledeći commit, umesto da svaka sitna izmena na disku odmah postane deo trajne istorije. Tačka (\`.\`) znači "sve izmene u ovom folderu".`,
+    initialState: {
+      isInitialized: true,
+      commits: {},
+      branches: { main: '' },
+      head: { type: 'branch', target: 'main' },
+      index: { staged: [], deleted: [] },
+      workingDirectory: {
+        files: ['index.html', 'style.css', 'script.js', '.gitignore'],
+        modified: [],
+        untracked: ['index.html', 'style.css', 'script.js', '.gitignore'],
+        ignored: ['node_modules/', 'secrets.txt', '.DS_Store']
+      },
+      gitignorePatterns: ['node_modules/', 'secrets.txt', '.DS_Store'],
+      hasRemote: false
+    },
+    validate: (state: RepoState) => {
+      return state.index.staged.length >= 3;
+    },
+    expectedCommands: ["git add"],
+    livePreview: { hasAbout: false, hasMenu: false, hasContact: false }
+  },
+  {
+    id: 7,
+    levelNumber: 1,
+    lessonNumber: 6,
+    title: "Lekcija 6: git commit -m \"poruka\"",
+    category: "Nivo 1: Osnove",
+    story: "Fajlovi čekaju u staging zoni. Sledeći korak je da to stanje trajno sačuvaš kao prvi zvanični snimak projekta Kafić Luna.",
+    whyItMatters: "Commit je 'vremenska kapsula' — tačka u istoriji na koju se uvek možeš vratiti. Poruka uz commit (-m) je beleška budućem tebi o tome šta i zašto je promenjeno.",
+    task: "Sačuvaj trenutno pripremljene izmene kao prvi commit u istoriji projekta, sa porukom koja opisuje šta je urađeno.",
+    hint1: "Koja komanda 'zapečati' staged izmene u istoriju? Kojom opcijom prilažeš tekstualnu poruku uz nju?",
+    hint2: "git commit -m \"Dodaj početnu strukturu Kafić Luna sajta\"",
+    expectedResult: "Vizuelni Git Graf dobija svoj prvi čvor — tvoj prvi commit sa porukom i hešom. Radni direktorijum je čist.",
+    quickOverview: "git commit -m \"poruka\" — trajno snima staged izmene uz opisnu poruku.",
+    description: `### Priča
+Fajlovi čekaju u staging zoni. Sledeći korak je da to stanje trajno sačuvaš kao prvi zvanični snimak projekta Kafić Luna.
+
+### Zašto je ovo bitno
+Commit je "vremenska kapsula" — tačka u istoriji na koju se uvek možeš vratiti. Poruka uz commit (\`-m\`) nije formalnost: to je beleška o tome šta je urađeno.`,
+    initialState: {
+      isInitialized: true,
+      commits: {},
+      branches: { main: '' },
+      head: { type: 'branch', target: 'main' },
+      index: { staged: ['index.html', 'style.css', 'script.js', '.gitignore'], deleted: [] },
+      workingDirectory: {
+        files: ['index.html', 'style.css', 'script.js', '.gitignore'],
+        modified: [],
+        untracked: [],
+        ignored: ['node_modules/', 'secrets.txt', '.DS_Store']
+      },
+      gitignorePatterns: ['node_modules/', 'secrets.txt', '.DS_Store'],
       hasRemote: false
     },
     validate: (state: RepoState) => {
       const commitIds = Object.keys(state.commits);
-      return (
-        commitIds.length >= 2 &&
-        state.branches['master'] !== 'C0' &&
-        state.workingDirectory.files.includes('glavna.py')
-      );
+      return commitIds.length >= 1 && state.branches['main'] === commitIds[0];
     },
-    expectedCommands: ["git status", "git add", "git commit"]
-  },
-  {
-    id: 3,
-    title: "Poništavanje lokalnih promena",
-    category: "Osnove",
-    description: `### Šta kada pogrešimo?
-Git nam pruža moćne mehanizme za ispravljanje grešaka pre nego što ih pošaljemo na server.
-
-Dve osnovne komande za poništavanje su:
-*   \`git checkout -- <fajl>\` - Odbacuje promene u radnom direktorijumu i vraća fajl u stanje iz poslednjeg commit-a ili pripremne zone (fajl se "prepisuje" čistom verzijom).
-*   \`git reset HEAD <fajl>\` - Uklanja fajl iz pripremne zone (index-a), ali ostavlja same izmene u fajlu netaknutim u radnom direktorijumu.
-
-**Tvoj zadatak:**
-Izmenio si fajl \`readme.txt\` i shvatio da su te izmene pogrešne. Fajl se trenutno nalazi u pripremnoj zoni (staged).
-1.  Poništi pripremu fajla tako što ćeš ga skinuti iz index-a pomoću \`git reset\`.
-2.  Zatim potpuno odbaci sve promene nad tim fajlom u radnom direktorijumu pomoću \`git checkout -- readme.txt\` kako bi tvoje radno stablo ponovo bilo čisto!`,
-    hint: "Ukucaj:\n1. `git reset` (ili `git reset HEAD readme.txt`)\n2. `git checkout -- readme.txt` za potpuno odbacivanje lokalnih izmena.",
-    initialState: {
-      commits: {
-        C0: { id: 'C0', parentIds: [], message: 'Inicijalni commit' }
-      },
-      branches: { master: 'C0' },
-      head: { type: 'branch', target: 'master' },
-      index: { staged: ['readme.txt'], deleted: [] },
-      workingDirectory: {
-        files: ['readme.txt'],
-        modified: [],
-        untracked: []
-      },
-      hasRemote: false
-    },
-    validate: (state: RepoState) => {
-      return (
-        state.index.staged.length === 0 &&
-        state.workingDirectory.untracked.length === 0 &&
-        state.workingDirectory.modified.length === 0
-      );
-    },
-    expectedCommands: ["git reset", "git checkout"]
-  },
-  {
-    id: 4,
-    title: "Uvod u grananje: Kreiranje i kretanje",
-    category: "Grananje",
-    description: `### Grane kao alternativni tokovi razvoja
-Grane (branches) su jedna od najmoćnijih Git mogućnosti. Za razliku od drugih sistema gde je grananje skupo i sporo jer kopira fajlove, **u Git-u je grana samo jednostavan 41-bajtni fajl koji sadrži SHA1 heš poslednjeg commit-a** na tom toku. Zato je kreiranje grana trenutno!
-
-Komande za rad sa granama:
-*   \`git branch <ime>\` - Kreira novu granu sa datim imenom koja pokazuje na trenutni commit.
-*   \`git checkout <ime>\` (ili modernija alternativa \`git switch <ime>\`) - Pomera \`HEAD\` pokazivač na izabranu granu i ažurira fajlove u radnom direktorijumu.
-*   \`git checkout -b <ime>\` - Brza prečica koja u jednom koraku kreira granu i prebacuje te na nju.
-
-**Tvoj zadatak:**
-1.  Kreiraj novu granu pod nazivom \`feature\` koristeći \`git branch feature\`.
-2.  Prebaci se na tu novu granu pomoću \`git checkout feature\`.
-3.  Napravi novi commit na toj grani sa porukom "Moj feature" pomoću \`git commit -m "Moj feature"\` (fajl je već pripremljen). Primeti kako se grana \`feature\` pomera napred, dok \`master\` ostaje na starom mestu!`,
-    hint: "Ukucaj:\n1. `git branch feature` za kreiranje grane\n2. `git checkout feature` za prelazak\n3. `git commit -m \"Moj feature\"` da napraviš commit na toj grani.",
-    initialState: {
-      commits: {
-        C0: { id: 'C0', parentIds: [], message: 'Inicijalni commit' },
-        C1: { id: 'C1', parentIds: ['C0'], message: 'Prva stabilna verzija' }
-      },
-      branches: { master: 'C1' },
-      head: { type: 'branch', target: 'master' },
-      index: { staged: ['glavna.py'], deleted: [] },
-      workingDirectory: {
-        files: ['readme.txt'],
-        modified: [],
-        untracked: []
-      },
-      hasRemote: false
-    },
-    validate: (state: RepoState) => {
-      return (
-        state.branches['feature'] !== undefined &&
-        state.head.type === 'branch' &&
-        state.head.target === 'feature' &&
-        state.branches['feature'] !== 'C1' &&
-        state.branches['master'] === 'C1'
-      );
-    },
-    expectedCommands: ["git branch", "git checkout", "git commit"]
-  },
-  {
-    id: 5,
-    title: "Spajanje grana: Merge",
-    category: "Grananje",
-    description: `### Integracija promena sa git merge
-Nakon što uspešno završimo rad na nekoj grani (npr. razvijemo novi feature), vreme je da te promene vratimo u glavnu granu (\`master\`). To radimo komandom \`git merge <ime_grane>\`.
-
-Postoje dve glavne strategije spajanja:
-1.  **Fast-Forward (brzo premotavanje):** Dešava se kada se vrh trenutne grane nalazi direktno iza grane koju spajamo (nema paralelnih promena). Git samo "premota" pokazivač trenutne grane na vrh ciljne grane.
-2.  **3-Way Merge (spajanje u tri tačke):** Dešava se kada su obe grane napredovale paralelno. Git pronalazi njihovog zajedničkog pretka i kreira poseban **merge commit** koji spaja obe istorije i ima dva roditelja.
-
-**Tvoj zadatak:**
-Nalaziš se na grani \`master\` (na commit-u C1). Grana \`feature\` je otišla korak ispred na commit C2.
-1.  Spoji granu \`feature\` u \`master\` granu. Budući da \`master\` nije napredovao, ovo će biti čist *Fast-Forward* merge!`,
-    hint: "Nalaziš se na grani `master`. Samo ukucaj:\n`git merge feature`",
-    initialState: {
-      commits: {
-        C0: { id: 'C0', parentIds: [], message: 'Inicijalni commit' },
-        C1: { id: 'C1', parentIds: ['C0'], message: 'Prvi commit na masteru' },
-        C2: { id: 'C2', parentIds: ['C1'], message: 'Završen feature rad' }
-      },
-      branches: { master: 'C1', feature: 'C2' },
-      head: { type: 'branch', target: 'master' },
-      index: { staged: [], deleted: [] },
-      workingDirectory: {
-        files: ['readme.txt', 'glavna.py'],
-        modified: [],
-        untracked: []
-      },
-      hasRemote: false
-    },
-    validate: (state: RepoState) => {
-      return (
-        state.branches['master'] === 'C2' &&
-        state.head.type === 'branch' &&
-        state.head.target === 'master'
-      );
-    },
-    expectedCommands: ["git merge"]
-  },
-  {
-    id: 6,
-    title: "Linearna istorija: Rebase",
-    category: "Grananje",
-    description: `### Ponovno baziranje sa git rebase
-Drugi i izuzetno popularan način za spajanje promena je **rebase**.
-Dok \`merge\` pravi novi commit koji spaja grane i čuva vernu sliku nelinearnog razvoja, \`rebase\` uzima sve jedinstvene commit-e sa trenutne grane, privremeno ih sklanja, i zatim ih **ponovo primenjuje (kopira) jednog po jednog na vrh ciljne grane**.
-
-**Rezultat:** Dobijamo savršeno čistu i linearnu istoriju projekta, kao da se nikada nismo ni granali!
-*Zlatno pravilo rebase-a:* Nikada ne radite rebase na deljenim javnim granama koje su već poslate na server, jer to menja istoriju (pravi nove commit-e sa novim heševima)!
-
-**Tvoj zadatak:**
-Nalaziš se na grani \`feature\` (na commit-u C2). U međuvremenu, na grani \`master\` je napravljen novi commit C3.
-1.  Odradi rebase trenutne grane \`feature\` na vrh grane \`master\` koristeći \`git rebase master\`.
-2.  Pogledaj kako je tvoj commit C2 premešten (kopiran kao C2') na sam vrh nakon C3!`,
-    hint: "Nalaziš se na grani `feature`. Samo ukucaj:\n`git rebase master`",
-    initialState: {
-      commits: {
-        C0: { id: 'C0', parentIds: [], message: 'Zajednički koren' },
-        C1: { id: 'C1', parentIds: ['C0'], message: 'Prvi commit' },
-        C2: { id: 'C2', parentIds: ['C1'], message: 'Rad na feature grani' },
-        C3: { id: 'C3', parentIds: ['C1'], message: 'Nezavisan commit na masteru' }
-      },
-      branches: { master: 'C3', feature: 'C2' },
-      head: { type: 'branch', target: 'feature' },
-      index: { staged: [], deleted: [] },
-      workingDirectory: {
-        files: ['readme.txt'],
-        modified: [],
-        untracked: []
-      },
-      hasRemote: false
-    },
-    validate: (state: RepoState) => {
-      const activeCommit = state.branches['feature'];
-      const commit = state.commits[activeCommit];
-      return (
-        commit &&
-        commit.parentIds.includes('C3') &&
-        state.head.type === 'branch' &&
-        state.head.target === 'feature'
-      );
-    },
-    expectedCommands: ["git rebase"]
-  },
-  {
-    id: 7,
-    title: "Odabir specifičnih izmena: Cherry-Pick",
-    category: "Grananje",
-    description: `### Biranje plodova sa git cherry-pick
-Šta ako želiš da preuzmeš samo jedan specifičan commit sa neke druge grane (npr. hitan bugfix koji je kolega odradio), a ne želiš da povlačiš sve ostale promene i spajaš celu granu?
-
-U tu svrhu koristimo **\`git cherry-pick <commit-id>\`**.
-Ova komanda uzima promenu zabeleženu u tom konkretnom commit-u i kopira je direktno na vrh tvoje trenutne grane kao potpuno novi commit.
-
-**Tvoj zadatak:**
-Nalaziš se na grani \`master\` (na commit-u C1). Na grani \`bugfix\` se nalazi commit \`C2\` koji popravlja kritičan bag sa porukom "Popravljen bag".
-1.  Cherry-pick-uj commit \`C2\` na svoju trenutnu granu \`master\` koristeći \`git cherry-pick C2\`.`,
-    hint: "Nalaziš se na grani `master`. Ukucaj:\n`git cherry-pick C2`",
-    initialState: {
-      commits: {
-        C0: { id: 'C0', parentIds: [], message: 'Inicijalni commit' },
-        C1: { id: 'C1', parentIds: ['C0'], message: 'Rad na masteru' },
-        C2: { id: 'C2', parentIds: ['C0'], message: 'Popravljen bag' }
-      },
-      branches: { master: 'C1', bugfix: 'C2' },
-      head: { type: 'branch', target: 'master' },
-      index: { staged: [], deleted: [] },
-      workingDirectory: {
-        files: ['readme.txt'],
-        modified: [],
-        untracked: []
-      },
-      hasRemote: false
-    },
-    validate: (state: RepoState) => {
-      const masterCommitId = state.branches['master'];
-      const masterCommit = state.commits[masterCommitId];
-      return (
-        masterCommitId !== 'C1' &&
-        masterCommit &&
-        masterCommit.parentIds.includes('C1') &&
-        masterCommit.message === 'Popravljen bag'
-      );
-    },
-    expectedCommands: ["git cherry-pick"]
+    expectedCommands: ["git commit"],
+    livePreview: { hasAbout: false, hasMenu: false, hasContact: false }
   },
   {
     id: 8,
-    title: "Udaljeni repozitorijumi i kloniranje",
-    category: "Remote",
-    description: `### Rad u distribuiranom okruženju
-Do sada smo radili isključivo na našem lokalnom računaru. Ali prava snaga Git-a leži u saradnji sa udaljenim serverima (npr. GitHub, GitLab).
+    levelNumber: 1,
+    lessonNumber: 7,
+    title: "Lekcija 7: git log",
+    category: "Nivo 1: Osnove",
+    story: "Vratio/la si se posle pauze i hoćeš da se podsetiš šta je tačno urađeno do sad na projektu.",
+    whyItMatters: "Graf prozor daje ti vizuelni pregled, ali git log je verzija koju dobijaš direktno u terminalu, svuda — čak i kad radiš na udaljenom serveru bez grafičkog alata.",
+    task: "Pronađi način da u terminalu vidiš listu svih commit-ova napravljenih do sad, sa detaljima o svakom.",
+    hint1: "Koja komanda ti daje 'dnevnik' odnosno hronološku listu commit-ova?",
+    hint2: "git log",
+    expectedResult: "Terminal ispisuje commit: pun heš, autora, datum i poruku.",
+    quickOverview: "git log — ispisuje istoriju commit-ova (heš, autor, datum, poruka).",
+    description: `### Priča
+Vratio/la si se posle pauze i hoćeš da se podsetiš šta je tačno urađeno do sad na projektu.
 
-Distribuirani model znači da **svaki član tima ima punu i kompletnu kopiju repozitorijuma lokalno**, uključujući kompletnu istoriju svih verzija.
-
-Za preuzimanje celog postojećeg repozitorijuma sa servera na tvoj računar koristi se komanda **\`git clone <url>\`**. Ova komanda:
-1.  Kreira novi direktorijum na tvom računaru.
-2.  Preuzima kompletnu istoriju i sve grane sa servera.
-3.  Kreira udaljene prateće grane (remote tracking branches) kao što je \`origin/master\` koje predstavljaju stanje na serveru u momentu kloniranja.
-
-**Tvoj zadatak:**
-1.  Kloniraj udaljeni repozitorijum pomoću komande \`git clone https://github.com/igord/git-kurs.git\`.`,
-    hint: "Ukucaj tačno:\n`git clone https://github.com/igord/git-kurs.git`",
+### Zašto je ovo bitno
+Graf prozor daje ti vizuelni pregled, ali \`git log\` je verzija koju dobijaš direktno u terminalu, svuda — čak i kad radiš na tuđem računaru ili serveru.`,
     initialState: {
-      commits: {},
-      branches: {},
-      head: { type: 'commit', target: '' },
+      isInitialized: true,
+      commits: {
+        C1: { id: 'C1', parentIds: [], message: 'Dodaj početnu strukturu Kafić Luna sajta', author: 'Luka <luka@kafic-luna.rs>', date: 'Danas' }
+      },
+      branches: { main: 'C1' },
+      head: { type: 'branch', target: 'main' },
       index: { staged: [], deleted: [] },
       workingDirectory: {
-        files: [],
+        files: ['index.html', 'style.css', 'script.js', '.gitignore'],
         modified: [],
-        untracked: []
+        untracked: [],
+        ignored: ['node_modules/', 'secrets.txt', '.DS_Store']
       },
+      gitignorePatterns: ['node_modules/', 'secrets.txt', '.DS_Store'],
       hasRemote: false
     },
-    validate: (state: RepoState) => {
-      return state.hasRemote === true && state.branches['master'] !== undefined && state.remoteBranches !== undefined && state.remoteBranches['origin/master'] !== undefined;
+    validate: (_state: RepoState, commandsRun = []) => {
+      return commandsRun.some(c => c.toLowerCase().includes('log'));
     },
-    expectedCommands: ["git clone"]
+    expectedCommands: ["git log"],
+    livePreview: { hasAbout: false, hasMenu: false, hasContact: false }
   },
   {
     id: 9,
-    title: "Razmena promena: Fetch & Push",
-    category: "Remote",
-    description: `### Kako sinhronizujemo rad?
-Kada radimo na projektu sa udaljenim serverom, imamo lokalne grane (npr. \`master\`) i udaljene prateće grane (npr. \`origin/master\`). Udaljene prateće grane služe kao obeleživači koji nam govore gde se nalazio server u trenutku poslednje komunikacije.
+    levelNumber: 1,
+    lessonNumber: 8,
+    title: "Lekcija 8: git push origin main",
+    category: "Nivo 1: Osnove",
+    story: "Tvoj prvi commit trenutno postoji samo na tvom računaru. Ako disk otkaže sutra, sve nestaje. Vreme je da napraviš rezervnu kopiju istorije na udaljenom repozitorijumu ('origin') — tvom Kafić Luna 'oblaku'.",
+    whyItMatters: "push je ono što ti omogućava saradnju — bez njega, tvoje izmene ostaju zaključane na tvom računaru. Povezuje lokalni rad sa timom i sa GitHub-om.",
+    task: "Pošalji svoju lokalnu istoriju commit-ova na udaljeni repozitorijum origin, na granu main.",
+    hint1: "Koja komanda 'gura' (push) commit-ove ka udaljenom repozitorijumu?",
+    hint2: "git push origin main",
+    expectedResult: "Vizuelni Git Graf dobija oznaku origin/main pored tvog poslednjeg commit-a — lokalna i udaljena istorija su sinhronizovane.",
+    quickOverview: "git push origin main — šalje lokalne commit-ove na udaljenu granu main repozitorijuma origin.",
+    description: `### Priča
+Tvoj prvi commit trenutno postoji samo na tvom računaru. Ako disk otkaže sutra, sve nestaje. Vreme je da napraviš rezervnu kopiju istorije na udaljenom repozitorijumu ("origin") — tvom Kafić Luna "oblaku".
 
-Za sinhronizaciju koristimo:
-*   \`git fetch\` - Povezuje se sa serverom i preuzima sve nove commit-e koje mi nemamo. Pomera našu \`origin/master\` prateću granu na novo mesto. **Ova komanda ne spaja promene sa našim lokalnim radom!**
-*   \`git push\` - Šalje naše nove lokalne commit-e na server i ažurira stanje na udaljenoj grani. Da bi push uspeo, naši lokalni commit-i moraju biti direktni potomci trenutnog stanja na serveru (istorija ne sme da se razilazi, inače moramo prvo odraditi pull).
-
-**Tvoj zadatak:**
-Nalaziš se u kloniranom repozitorijumu. Napravio si novi lokalni commit C2 na grani \`master\`. Server još uvek ne zna za njega (\`origin/master\` je na C1).
-1.  Pošalji svoje lokalne promene na server koristeći \`git push\`. Primeti kako se nakon uspešnog slanja udaljena grana \`origin/master\` izjednačava sa tvojom lokalnom granom \`master\`!`,
-    hint: "Samo ukucaj:\n`git push` da pošalješ promene na server.",
+### Zašto je ovo bitno
+\`push\` je ono što ti omogućava saradnju — bez njega, tvoje izmene ostaju zaključane na tvom računaru.`,
     initialState: {
+      isInitialized: true,
       commits: {
-        C0: { id: 'C0', parentIds: [], message: 'Inicijalni commit' },
-        C1: { id: 'C1', parentIds: ['C0'], message: 'Zajednički commit' },
-        C2: { id: 'C2', parentIds: ['C1'], message: 'Lokalne promene na masteru' }
+        C1: { id: 'C1', parentIds: [], message: 'Dodaj početnu strukturu Kafić Luna sajta', author: 'Luka <luka@kafic-luna.rs>', date: 'Danas' }
       },
-      branches: { master: 'C2' },
-      head: { type: 'branch', target: 'master' },
+      branches: { main: 'C1' },
+      head: { type: 'branch', target: 'main' },
       index: { staged: [], deleted: [] },
       workingDirectory: {
-        files: ['readme.txt'],
+        files: ['index.html', 'style.css', 'script.js', '.gitignore'],
         modified: [],
-        untracked: []
-      },
-      remoteCommits: {
-        C0: { id: 'C0', parentIds: [], message: 'Inicijalni commit', isRemote: true },
-        C1: { id: 'C1', parentIds: ['C0'], message: 'Zajednički commit', isRemote: true }
-      },
-      remoteBranches: {
-        'origin/master': 'C1'
-      },
-      hasRemote: true
-    },
-    validate: (state: RepoState) => {
-      return (
-        state.remoteBranches !== undefined &&
-        state.remoteBranches['origin/master'] === 'C2' &&
-        state.branches['master'] === 'C2'
-      );
-    },
-    expectedCommands: ["git push"]
-  },
-  {
-    id: 10,
-    title: "Preuzimanje i spajanje: Git Pull",
-    category: "Remote",
-    description: `### Kompletna sinhronizacija sa git pull
-Dok radimo na našem delu koda, kolege iz tima takođe pišu kod i šalju ga na server. Naša lokalna grana \`master\` vremenom zaostaje za stanjem na serveru.
-
-Da bismo u jednom koraku preuzeli te nove promene i integrisali ih u naš radni kod, koristimo komandu **\`git pull\`**.
-
-Pod kapuljačom, komanda \`git pull\` je zapravo prečica koja automatski izvršava dve komande uzastopno:
-1.  **\`git fetch\`** - Preuzima nove commit-e i ažurira \`origin/master\`.
-2.  **\`git merge origin/master\`** - Spaja te preuzete promene u našu trenutno aktivnu lokalnu granu.
-
-**Tvoj zadatak:**
-Nalaziš se na svojoj lokalnoj grani \`master\` (na commit-u C1). Na udaljenom serveru su se u međuvremenu pojavili novi commit-i od drugih kolega, a vrh servera (\`origin/master\`) je na commit-u C2.
-1.  Preuzmi i integriši te promene u svoj lokalni master u jednom koraku pomoću komande \`git pull\`.`,
-    hint: "Samo ukucaj:\n`git pull` da preuzmeš i automatski spojiš promene sa servera.",
-    initialState: {
-      commits: {
-        C0: { id: 'C0', parentIds: [], message: 'Inicijalni commit' },
-        C1: { id: 'C1', parentIds: ['C0'], message: 'Zajednički commit' }
-      },
-      branches: { master: 'C1' },
-      head: { type: 'branch', target: 'master' },
-      index: { staged: [], deleted: [] },
-      workingDirectory: {
-        files: ['readme.txt'],
-        modified: [],
-        untracked: []
-      },
-      remoteCommits: {
-        C0: { id: 'C0', parentIds: [], message: 'Inicijalni commit', isRemote: true },
-        C1: { id: 'C1', parentIds: ['C0'], message: 'Zajednički commit', isRemote: true },
-        C2: { id: 'C2', parentIds: ['C1'], message: 'Novi rad kolege sa servera', isRemote: true }
-      },
-      remoteBranches: {
-        'origin/master': 'C2'
-      },
-      hasRemote: true
-    },
-    validate: (state: RepoState) => {
-      return (
-        state.branches['master'] === 'C2' &&
-        state.head.type === 'branch' &&
-        state.head.target === 'master'
-      );
-    },
-    expectedCommands: ["git pull"]
-  },
-  {
-    id: 11,
-    title: "Privremeno sklanjanje izmena: Git Stash",
-    category: "Srednji nivo",
-    description: `### Privremeno sklanjanje izmena: Git Stash
-Često se dešava da radite na nekom složenom zadatku i vaši fajlovi su u "polu-dovršenom" stanju, a onda morate hitno da se prebacite na drugu granu da popravite kritičan bag.
-Git vam ne dozvoljava da promenite granu ako imate nepripremljene izmene koje bi mogle biti prebrisane.
-
-Da ne biste morali da pravite besmislene "WIP" commit-e, koristite **\`git stash\`**.
-Ova komanda uzima sve vaše trenutne lokalne izmene (i iz pripremne zone i iz radnog direktorijuma), sklanja ih na tajni interni "stek", i vraća vaše radno stablo u savršeno čisto stanje.
-
-Kada završite hitan posao i vratite se nazad, ukucajte **\`git stash pop\`** da biste vratili te sačuvane promene nazad na svoje radno stablo i nastavili tačno tamo gde ste stali!
-
-**Tvoj zadatak:**
-1. Imate modifikovan fajl \`readme.txt\`. Sklonite izmene sa \`git stash\`.
-2. Vratite izmene nazad na radno stablo sa \`git stash pop\`.`,
-    hint: "Ukucaj redom:\n1. `git stash` da skloniš promene.\n2. `git stash pop` da ih vratiš na radno stablo.",
-    initialState: {
-      commits: {
-        C0: { id: 'C0', parentIds: [], message: 'Inicijalni commit' }
-      },
-      branches: { master: 'C0' },
-      head: { type: 'branch', target: 'master' },
-      index: { staged: [], deleted: [] },
-      workingDirectory: {
-        files: ['readme.txt'],
-        modified: ['readme.txt'],
-        untracked: []
-      },
-      hasRemote: false,
-      stash: []
-    },
-    validate: (state: RepoState) => {
-      return state.workingDirectory.modified.includes('readme.txt') && (!state.stash || state.stash.length === 0);
-    },
-    expectedCommands: ["git stash", "git stash pop"]
-  },
-  {
-    id: 12,
-    title: "Pregledanje izmena sa git diff",
-    category: "Srednji nivo",
-    description: `### Pregledanje izmena sa git diff
-Kao dobar programer, pre nego što dodate fajlove u pripremnu zonu ili napravite commit, uvek treba detaljno da pregledate šta ste tačno promenili u kodu.
-
-U tu svrhu koristimo komandu **\`git diff\`**:
-*   \`git diff\` - Prikazuje razliku između vašeg trenutnog radnog direktorijuma i pripremne zone (staging area). Odlično da vidite šta još niste pripremili!
-*   \`git diff --staged\` (ili \`git diff --cached\`) - Prikazuje razliku između pripremne zone i poslednjeg commit-a. Odlično da vidite šta će tačno ući u sledeći commit!
-
-**Tvoj zadatak:**
-1. Imate nepripremljene izmene u fajlu \`readme.txt\`. Pogledajte ih sa \`git diff\`.
-2. Dodajte fajl u pripremnu zonu sa \`git add readme.txt\`.
-3. Pogledajte pripremljene izmene sa \`git diff --staged\` (ili \`git diff --cached\`).`,
-    hint: "Ukucaj redom:\n1. `git diff` da vidiš lokalne razlike.\n2. `git add readme.txt` da pripremiš fajl.\n3. `git diff --staged` da vidiš šta ide u commit.",
-    initialState: {
-      commits: {
-        C0: { id: 'C0', parentIds: [], message: 'Inicijalni commit' }
-      },
-      branches: { master: 'C0' },
-      head: { type: 'branch', target: 'master' },
-      index: { staged: [], deleted: [] },
-      workingDirectory: {
-        files: ['readme.txt'],
-        modified: ['readme.txt'],
         untracked: []
       },
       hasRemote: false
     },
     validate: (state: RepoState) => {
-      return state.index.staged.includes('readme.txt');
+      return state.remoteBranches !== undefined && state.remoteBranches['origin/main'] === 'C1';
     },
-    expectedCommands: ["git diff", "git add", "git diff --staged"]
+    expectedCommands: ["git push"],
+    livePreview: { hasAbout: false, hasMenu: false, hasContact: false }
   },
   {
-    id: 13,
-    title: "Označavanje važnih trenutaka sa git tag",
-    category: "Srednji nivo",
-    description: `### Označavanje važnih trenutaka sa git tag
-U toku razvoja softvera, određeni commit-i predstavljaju prekretnice - kao što su zvanična izdanja (npr. verzija \`v1.0\`, \`v2.0\`).
-Umesto da pamtimo komplikovane SHA1 hešove tih commit-ova, možemo im dodeliti lako čitljive oznake (tags).
+    id: 10,
+    levelNumber: 1,
+    lessonNumber: 9,
+    title: "Lekcija 9: git pull origin main",
+    category: "Nivo 1: Osnove",
+    story: "Dok si bio/la odsutan/na, tvoj AI asistent (ili koleginica Iva) je direktno na udaljenom repozitorijumu dodao/la sekciju 'O nama' na sajt Kafić Luna. Tvoja lokalna kopija to još ne zna.",
+    whyItMatters: "Rad retko ide u jednom smeru — timovi i AI alati stalno dodaju izmene na zajednički repozitorijum. pull je način da tvoj lokalni projekat ostane ažuran.",
+    task: "Preuzmi najnovije izmene sa origin repozitorijuma, sa grane main, u svoj lokalni projekat.",
+    hint1: "Koja komanda 'povlači' (pull) nove promene sa udaljenog repozitorijuma, na isti način na koji push šalje tvoje?",
+    hint2: "git pull origin main",
+    expectedResult: "Projekat prozor i Live Web Pregledač pokazuju ažuriran index.html sa novom sekcijom 'O nama'. Git Graf dobija novi commit koji je stigao spolja.",
+    quickOverview: "git pull origin main — preuzima i spaja izmene sa udaljene grane main u tvoju lokalnu granu.",
+    description: `### Priča
+Dok si bio/la odsutan/na, tvoj AI asistent (ili kolega) je direktno na udaljenom repozitorijumu dodao/la sekciju "O nama" na sajt Kafić Luna. Tvoja lokalna kopija to još ne zna.
 
-Komanda **\`git tag <ime_taga>\`** kreira trajnu oznaku na commit-u na kome se trenutno nalazi \`HEAD\`.
-
-**Tvoj zadatak:**
-1. Označite trenutni commit verzijom \`v1.0\` koristeći komandu \`git tag v1.0\`.`,
-    hint: "Samo ukucaj:\n`git tag v1.0`",
+### Zašto je ovo bitno
+Rad retko ide u jednom smeru — timovi i AI alati stalno dodaju izmene na zajednički repozitorijum. \`pull\` je način da tvoj lokalni projekat ostane ažuran.`,
     initialState: {
+      isInitialized: true,
       commits: {
-        C0: { id: 'C0', parentIds: [], message: 'Inicijalni commit' },
-        C1: { id: 'C1', parentIds: ['C0'], message: 'Spremno za produkciju' }
+        C1: { id: 'C1', parentIds: [], message: 'Dodaj početnu strukturu Kafić Luna sajta', author: 'Luka <luka@kafic-luna.rs>', date: 'Danas' }
       },
-      branches: { master: 'C1' },
-      head: { type: 'branch', target: 'master' },
+      branches: { main: 'C1' },
+      head: { type: 'branch', target: 'main' },
       index: { staged: [], deleted: [] },
       workingDirectory: {
-        files: ['readme.txt'],
+        files: ['index.html', 'style.css', 'script.js', '.gitignore'],
         modified: [],
         untracked: []
       },
-      hasRemote: false,
-      tags: {}
+      remoteBranches: {
+        'origin/main': 'C1'
+      },
+      hasRemote: true
+    },
+    validate: (state: RepoState) => {
+      const commitIds = Object.keys(state.commits);
+      return commitIds.length >= 2 && state.branches['main'] !== 'C1';
+    },
+    expectedCommands: ["git pull"],
+    livePreview: { hasAbout: true, hasMenu: false, hasContact: false }
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // NIVO 2: SREDNJI NIVO — KAFIC LUNA (12 LEKCIJA)
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    id: 11,
+    levelNumber: 2,
+    lessonNumber: 0,
+    title: "Lekcija 0: Zašto grananje menja sve",
+    category: "Nivo 2: Srednji nivo",
+    isReadingOnly: true,
+    story: "Do sad si radio/la direktno na main grani — svaki commit ide pravo u stabilnu verziju. Čim se pojavi koleginica Iva ili AI asistent, direktan rad na main postaje rizičan.",
+    whyItMatters: "Grana (branch) je paralelna kopija projekta — svoj mali 'šta ako' svet u kom možeš da eksperimentišeš, a main ostaje netaknut sve dok ne odlučiš da spojiš rad.",
+    task: "Pročitaj koncept grananja i klikni na dugme 'Sledeći nivo' ispod da započneš rad na granama.",
+    hint1: "Ovo je uvodna lekcija o grananju i timskom radu sa Ivom.",
+    hint2: "Klikni na dugme 'Sledeći nivo 🔓' ispod.",
+    expectedResult: "Upoznavanje sa radom na paralelnim granama.",
+    quickOverview: "Grana (branch) — izolovan tok razvoja koji štiti stabilnu main verziju.",
+    description: `### Zašto grananje menja sve
+
+Do sad si radio/la direktno na \`main\` grani — svaki commit ide pravo u "zvaničnu", stabilnu verziju sajta. To je u redu dok si sam/a, ali čim se pojavi još neko (ili AI asistent koji generiše kod dok ti radiš nešto drugo), direktan rad na \`main\` postaje rizičan.
+
+**Grana (branch)** je paralelna kopija projekta — svoj mali "šta ako" svet u kom možeš da eksperimentišeš, praviš commit-ove, čak i pogrešiš, a \`main\` ostaje netaknut sve dok ti sam/a ne odlučiš da svoj rad spojiš nazad.
+
+Od ove lekcije, na projektu Kafić Luna radiš sa **Ivom**, koleginicom koja radi paralelno na sopstvenim granama. Njen rad će ti kasnije doneti i prvi pravi konflikt.
+
+<div class="xp-code-box" style="text-align: center; padding: 10px; font-family: monospace; font-size: 11.5px; color: #1e3a8a;">
+  <div><strong>main:</strong> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;●───●───●───●───●───●</div>
+  <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\\ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/</div>
+  <div><strong style="color: #059669;">tvoja grana:</strong> &nbsp;&nbsp;&nbsp;&nbsp;●───●───●───●</div>
+</div>
+
+Kreni na sledeću lekciju.`,
+    initialState: {
+      isInitialized: true,
+      commits: {
+        C1: { id: 'C1', parentIds: [], message: 'Dodaj početnu strukturu Kafić Luna sajta', author: 'Luka', date: 'Danas' },
+        C2: { id: 'C2', parentIds: ['C1'], message: 'Dodaj "O nama" sekciju', author: 'Iva', date: 'Danas' }
+      },
+      branches: { main: 'C2' },
+      head: { type: 'branch', target: 'main' },
+      index: { staged: [], deleted: [] },
+      workingDirectory: {
+        files: ['index.html', 'style.css', 'script.js', '.gitignore'],
+        modified: [],
+        untracked: []
+      },
+      hasRemote: true
+    },
+    validate: () => true,
+    expectedCommands: [],
+    livePreview: { hasAbout: true, hasMenu: false, hasContact: false }
+  },
+  {
+    id: 12,
+    levelNumber: 2,
+    lessonNumber: 1,
+    title: "Lekcija 1: git branch i git switch -c",
+    category: "Nivo 2: Srednji nivo",
+    story: "Želiš da dodaš novu sekciju 'Meni' na sajt, ali ne želiš da nedovršen rad ide direktno na main, koji je trenutno živ i stabilan.",
+    whyItMatters: "Ovo je navika profesionalaca za svaku novu funkcionalnost: nova grana = izolovan prostor za rad bez rizika.",
+    task: "Napravi novu granu za rad na sekciji menija, i odmah se prebaci na nju — u jednom potezu.",
+    hint1: "git branch pravi granu, a git switch prebacuje. Koja opcija ih kombinuje u jednu komandu?",
+    hint2: "git switch -c meni-sekcija",
+    expectedResult: "Vizuelni Git Graf prikazuje novu granu meni-sekcija. Terminal prompt pokazuje da si na meni-sekcija.",
+    quickOverview: "git switch -c <ime> — pravi novu granu i odmah se prebacuje na nju.",
+    description: `### Priča
+Želiš da dodaš novu sekciju "Meni" na sajt, ali ne želiš da nedovršen rad ide direktno na \`main\`, koji je trenutno živ i stabilan.
+
+### Zašto je ovo bitno
+Nova grana = izolovan prostor za rad, bez rizika da pokvariš ono što već radi.`,
+    initialState: {
+      isInitialized: true,
+      commits: {
+        C1: { id: 'C1', parentIds: [], message: 'Dodaj početnu strukturu Kafić Luna sajta' },
+        C2: { id: 'C2', parentIds: ['C1'], message: 'Dodaj "O nama" sekciju' }
+      },
+      branches: { main: 'C2' },
+      head: { type: 'branch', target: 'main' },
+      index: { staged: [], deleted: [] },
+      workingDirectory: {
+        files: ['index.html', 'style.css', 'script.js', '.gitignore'],
+        modified: [],
+        untracked: []
+      },
+      hasRemote: true
+    },
+    validate: (state: RepoState) => {
+      return (
+        state.branches['meni-sekcija'] !== undefined &&
+        state.head.type === 'branch' &&
+        state.head.target === 'meni-sekcija'
+      );
+    },
+    expectedCommands: ["git switch", "git branch", "git checkout"],
+    livePreview: { hasAbout: true, hasMenu: false, hasContact: false }
+  },
+  {
+    id: 13,
+    levelNumber: 2,
+    lessonNumber: 2,
+    title: "Lekcija 2: git merge",
+    category: "Nivo 2: Srednji nivo",
+    story: "Na grani meni-sekcija si dodao/la meni i commit-ovao/la. Sad je sekcija spremna i želiš je vratiti u main.",
+    whyItMatters: "Grananje bez spajanja je beskorisno — svaki uspešan rad se vraća u glavnu liniju. Pošto se main nije menjao, ovo je fast-forward merge.",
+    task: "Vrati se na main granu (git switch main), pa spoji svoj završeni rad sa grane meni-sekcija u nju.",
+    hint1: "Koja komanda spaja navedenu granu u granu na kojoj se trenutno nalaziš?",
+    hint2: "git switch main pa git merge meni-sekcija",
+    expectedResult: "index.html i Live Browser na main grani sada sadrže Meni sekciju! Git Graf pokazuje da su main i meni-sekcija na istoj tački.",
+    quickOverview: "git merge <grana> — spaja navedenu granu u trenutnu granu.",
+    description: `### Priča
+Na grani \`meni-sekcija\` si dodao/la HTML/CSS za meni i već si to commit-ovao/la. Sad je sekcija spremna i želiš je vratiti u \`main\`.
+
+### Zašto je ovo bitno
+Pošto se \`main\` nije menjao dok si ti radio/la, ovo će biti najjednostavniji **fast-forward** merge — Git samo pomera pokazivač \`main\` grane napred.`,
+    initialState: {
+      isInitialized: true,
+      commits: {
+        C1: { id: 'C1', parentIds: [], message: 'Dodaj početnu strukturu Kafić Luna sajta' },
+        C2: { id: 'C2', parentIds: ['C1'], message: 'Dodaj "O nama" sekciju' },
+        C3: { id: 'C3', parentIds: ['C2'], message: 'Dodaj Meni sekciju i cenovnik kafe', author: 'Luka' }
+      },
+      branches: { main: 'C2', 'meni-sekcija': 'C3' },
+      head: { type: 'branch', target: 'main' },
+      index: { staged: [], deleted: [] },
+      workingDirectory: {
+        files: ['index.html', 'style.css', 'script.js', '.gitignore'],
+        modified: [],
+        untracked: []
+      },
+      hasRemote: true
+    },
+    validate: (state: RepoState) => {
+      return (
+        state.branches['main'] === 'C3' &&
+        state.head.type === 'branch' &&
+        state.head.target === 'main'
+      );
+    },
+    expectedCommands: ["git merge"],
+    livePreview: { hasAbout: true, hasMenu: true, hasContact: false }
+  },
+  {
+    id: 14,
+    levelNumber: 2,
+    lessonNumber: 3,
+    title: "Lekcija 3: Merge konflikt",
+    category: "Nivo 2: Srednji nivo",
+    story: "Dok si ti radio/la na meniju, Iva je nezavisno radila na svojoj grani kontakt-forma — i menjala je isti red u navigaciji index.html da doda link ka kontakt formi. Sad spajanje izaziva pravi sukob!",
+    whyItMatters: "Konflikti nisu greška — normalan su deo timskog rada čim dvoje ljudi nezavisno promene isti red istog fajla. Iskusni developeri mirno rešavaju konflikte.",
+    task: "Pokušaj da spojiš kontakt-forma granu u main. Git će javiti konflikt u index.html — razreši ga (zadrži oba linka), dodaj index.html i završi commit.",
+    hint1: "Git ostavlja markere <<<<<<<, =======, >>>>>>>. Možeš u Folderu Projekta kliknuti na 'Razreši konflikt' ili pripremiti sa git add index.html pa git commit.",
+    hint2: "git merge kontakt-forma -> git add index.html -> git commit -m \"Spoji kontakt formu i meni\"",
+    expectedResult: "Terminal javlja CONFLICT u index.html. Nakon rešavanja, Git Graf prikazuje pravi spajajući merge commit sa dve linije koje se stapaju.",
+    quickOverview: "Konflikt: uredi sporni deo između <<<<<<< i >>>>>>>, pa git add + git commit.",
+    description: `### Priča
+Dok si ti radio/la na meniju, Iva je nezavisno radila na svojoj grani \`kontakt-forma\` — i menjala je **isti red** u navigaciji \`index.html\` da doda link ka kontakt formi. Spajanje izaziva sukob!
+
+### Zašto je ovo bitno
+Konflikti se dešavaju čim dvoje ljudi (ili ti i AI asistent) nezavisno promene isti deo fajla.`,
+    initialState: {
+      isInitialized: true,
+      commits: {
+        C1: { id: 'C1', parentIds: [], message: 'Početna struktura' },
+        C2: { id: 'C2', parentIds: ['C1'], message: 'O nama sekcija' },
+        C3: { id: 'C3', parentIds: ['C2'], message: 'Dodat meni', author: 'Luka' },
+        C4: { id: 'C4', parentIds: ['C2'], message: 'Dodata kontakt forma', author: 'Iva' }
+      },
+      branches: { main: 'C3', 'kontakt-forma': 'C4' },
+      head: { type: 'branch', target: 'main' },
+      index: { staged: [], deleted: [] },
+      workingDirectory: {
+        files: ['index.html', 'style.css', 'script.js', '.gitignore'],
+        modified: [],
+        untracked: []
+      },
+      hasRemote: true
+    },
+    validate: (state: RepoState) => {
+      const mainCommitId = state.branches['main'];
+      const mainCommit = state.commits[mainCommitId];
+      return (
+        mainCommit &&
+        mainCommit.parentIds.length >= 2 &&
+        !state.mergeInProgress
+      );
+    },
+    expectedCommands: ["git merge", "git add", "git commit"],
+    livePreview: { hasAbout: true, hasMenu: true, hasContact: true }
+  },
+  {
+    id: 15,
+    levelNumber: 2,
+    lessonNumber: 4,
+    title: "Lekcija 4: git log --oneline --graph --all",
+    category: "Nivo 2: Srednji nivo",
+    story: "Projekat sad ima nekoliko grana i jedan pravi merge iza sebe. Iz čistog terminala hoćeš da vidiš celu tu priču.",
+    whyItMatters: "Grafički prikaz u terminalu je nezamenljiv na pravom serveru ili tuđem računaru bez GUI alata.",
+    task: "Pronađi način da u terminalu vidiš sažetu, grafičku istoriju svih grana odjednom.",
+    hint1: "Znaš git log. Dodaj mu opcije za jedan red, graf i sve grane.",
+    hint2: "git log --oneline --graph --all",
+    expectedResult: "Terminal ispisuje kompaktnu ASCII vizuelizaciju: grane, tačku spajanja i merge commit.",
+    quickOverview: "git log --oneline --graph --all — sažeti, grafički prikaz istorije svih grana u terminalu.",
+    description: `### Priča
+Projekat sad ima nekoliko grana i jedan pravi merge iza sebe. Iz čistog terminala, bez otvaranja Grafa, hoćeš da vidiš celu tu priču.
+
+### Zašto je ovo bitno
+Kad radiš na pravom serveru bez GUI alata, ova kombinacija opcija ti daje grafički prikaz direktno u terminalu — kompaktno i sa svim granama vidljivim odjednom.`,
+    initialState: {
+      isInitialized: true,
+      commits: {
+        C1: { id: 'C1', parentIds: [], message: 'Početna struktura' },
+        C2: { id: 'C2', parentIds: ['C1'], message: 'O nama sekcija' },
+        C3: { id: 'C3', parentIds: ['C2'], message: 'Dodat meni' },
+        C4: { id: 'C4', parentIds: ['C2'], message: 'Dodata kontakt forma' },
+        C5: { id: 'C5', parentIds: ['C3', 'C4'], message: 'Merge grane kontakt-forma u main' }
+      },
+      branches: { main: 'C5', 'meni-sekcija': 'C3', 'kontakt-forma': 'C4' },
+      head: { type: 'branch', target: 'main' },
+      index: { staged: [], deleted: [] },
+      workingDirectory: {
+        files: ['index.html', 'style.css', 'script.js', '.gitignore'],
+        modified: [],
+        untracked: []
+      },
+      hasRemote: true
+    },
+    validate: (_state: RepoState, commandsRun = []) => {
+      return commandsRun.some(c => c.toLowerCase().includes('log') && (c.includes('--graph') || c.includes('--all') || c.includes('--oneline')));
+    },
+    expectedCommands: ["git log"],
+    livePreview: { hasAbout: true, hasMenu: true, hasContact: true }
+  },
+  {
+    id: 16,
+    levelNumber: 2,
+    lessonNumber: 5,
+    title: "Lekcija 5: git restore <fajl>",
+    category: "Nivo 2: Srednji nivo",
+    story: "Direktno na main probao/la si novu crvenu boju dugmeta u style.css. Ne sviđa ti se — želiš da fajl vratiš tačno onakav kakav je bio u poslednjem commit-u.",
+    whyItMatters: "Ovo je najbezopasniji od undo alata — radi sa izmenama koje još nisi ni dodao (add) niti commit-ovao. Idealan za brze eksperimente koje želiš da baciš.",
+    task: "Odbaci nesačuvanu izmenu u style.css i vrati fajl u stanje iz poslednjeg commit-a.",
+    hint1: "Koja komanda 'vraća' (restore) fajl u prethodno sačuvano stanje?",
+    hint2: "git restore style.css",
+    expectedResult: "style.css i Live Web Pregledač se vraćaju na staru originalnu boju dugmeta. git status više ne prikazuje fajl kao izmenjen.",
+    quickOverview: "git restore <fajl> — odbacuje nesačuvane izmene u radnom direktorijumu.",
+    description: `### Priča
+Direktno na \`main\` probao/la si novu boju dugmeta u \`style.css\`, samo da vidiš kako izgleda. Ne sviđa ti se — želiš da fajl vratiš tačno onakav kakav je bio u poslednjem commit-u, bez čuvanja ove izmene.
+
+### Zašto je ovo bitno
+Radi samo sa izmenama koje još nisi ni dodao (\`add\`) niti commit-ovao. Idealan za brze eksperimente koje želiš da baciš bez traga.`,
+    initialState: {
+      isInitialized: true,
+      commits: {
+        C1: { id: 'C1', parentIds: [], message: 'Početna struktura' },
+        C2: { id: 'C2', parentIds: ['C1'], message: 'O nama sekcija' },
+        C3: { id: 'C3', parentIds: ['C2'], message: 'Meni i kontakt forma' }
+      },
+      branches: { main: 'C3' },
+      head: { type: 'branch', target: 'main' },
+      index: { staged: [], deleted: [] },
+      workingDirectory: {
+        files: ['index.html', 'style.css', 'script.js', '.gitignore'],
+        modified: ['style.css'],
+        untracked: []
+      },
+      hasRemote: true
+    },
+    validate: (state: RepoState) => {
+      return !state.workingDirectory.modified.includes('style.css');
+    },
+    expectedCommands: ["git restore", "git checkout"],
+    livePreview: { hasAbout: true, hasMenu: true, hasContact: true, isStyleBroken: true }
+  },
+  {
+    id: 17,
+    levelNumber: 2,
+    lessonNumber: 6,
+    title: "Lekcija 6: git reset <fajl>",
+    category: "Nivo 2: Srednji nivo",
+    story: "Greškom si pokrenuo/la git add . i sad je i tvoj privatni test-fajl.txt u staging zoni, spreman za commit. Ne želiš da ga commit-uješ još.",
+    whyItMatters: "add nije nepovratna radnja — reset te vraća korak unazad u staging procesu, bez brisanja bilo čega sa diska. Fajl ostaje na disku, samo izlazi iz staging zone.",
+    task: "Izvuci taj fajl iz staging zone, tako da izmene ostanu na disku, ali više nije spreman za sledeći commit.",
+    hint1: "Koja komanda 'resetuje' stanje fajla u staging zoni bez diranja sadržaja fajla?",
+    hint2: "git reset test-fajl.txt (ili git reset)",
+    expectedResult: "git status prikazuje fajl ponovo kao 'Changes not staged' umesto 'Changes to be committed'.",
+    quickOverview: "git reset <fajl> — uklanja fajl iz staging zone, zadržava izmene na disku.",
+    description: `### Priča
+Radeći na sitnoj izmeni, greškom si pokrenuo/la \`git add .\` i sad je i tvoj privatni test fajl u staging zoni, spreman za sledeći commit. Ne želiš da ga commit-uješ još.
+
+### Zašto je ovo bitno
+\`add\` nije nepovratna radnja — ovo je komanda koja te vraća korak unazad u samom staging procesu, bez brisanja bilo čega sa diska.`,
+    initialState: {
+      isInitialized: true,
+      commits: {
+        C1: { id: 'C1', parentIds: [], message: 'Početna struktura' },
+        C2: { id: 'C2', parentIds: ['C1'], message: 'Kafić Luna stabilna verzija' }
+      },
+      branches: { main: 'C2' },
+      head: { type: 'branch', target: 'main' },
+      index: { staged: ['test-fajl.txt'], deleted: [] },
+      workingDirectory: {
+        files: ['index.html', 'style.css', 'script.js', '.gitignore', 'test-fajl.txt'],
+        modified: ['test-fajl.txt'],
+        untracked: []
+      },
+      hasRemote: true
+    },
+    validate: (state: RepoState) => {
+      return !state.index.staged.includes('test-fajl.txt');
+    },
+    expectedCommands: ["git reset"],
+    livePreview: { hasAbout: true, hasMenu: true, hasContact: true }
+  },
+  {
+    id: 18,
+    levelNumber: 2,
+    lessonNumber: 7,
+    title: "Lekcija 7: git revert",
+    category: "Nivo 2: Srednji nivo",
+    story: "Poslednji commit na main (koji je već i push-ovan) pokvario je link ka Meni sekciji. Fajl je već objavljen — Iva ga je već povukla. Ne sme se brisati istorija.",
+    whyItMatters: "Kad je kod deljen sa timom, brisanje istorije je opasno. revert rešava to bezbedno: pravi nov commit koji poništava efekte starog.",
+    task: "Poništi efekte poslednjeg commit-a na način koji produžava istoriju novim commit-om.",
+    hint1: "Koja komanda pravi novi commit koji radi 'suprotno' od određenog commit-a?",
+    hint2: "git revert HEAD",
+    expectedResult: "Vizuelni Git Graf dobija nov commit iznad problematičnog, jasno označen kao revert. index.html se vraća u ispravno stanje.",
+    quickOverview: "git revert <commit> — pravi novi commit koji poništava izmene iz navedenog commit-a.",
+    description: `### Priča
+Poslednji commit na \`main\` (koji je već i push-ovan) pokvario je link ka "Meni" sekciji. Fajl je već objavljen — nije opcija da se pretvaraš da se commit nikad nije desio, jer je Iva već povukla tu verziju.
+
+### Zašto je ovo bitno
+Kad je nešto već deljeno sa timom, brisanje istorije je opasno. \`revert\` pravi **nov** commit koji poništava efekte starog, bezbedno.`,
+    initialState: {
+      isInitialized: true,
+      commits: {
+        C1: { id: 'C1', parentIds: [], message: 'Kafić Luna baza' },
+        C2: { id: 'C2', parentIds: ['C1'], message: 'Pokvaren link ka meniju', author: 'Luka' }
+      },
+      branches: { main: 'C2' },
+      head: { type: 'branch', target: 'main' },
+      index: { staged: [], deleted: [] },
+      workingDirectory: {
+        files: ['index.html', 'style.css', 'script.js', '.gitignore'],
+        modified: [],
+        untracked: []
+      },
+      hasRemote: true
+    },
+    validate: (state: RepoState) => {
+      const commitIds = Object.keys(state.commits);
+      return commitIds.length >= 3 && state.branches['main'] !== 'C2';
+    },
+    expectedCommands: ["git revert"],
+    livePreview: { hasAbout: true, hasMenu: true, hasContact: true }
+  },
+  {
+    id: 19,
+    levelNumber: 2,
+    lessonNumber: 8,
+    title: "Lekcija 8: git stash i git stash pop",
+    category: "Nivo 2: Srednji nivo",
+    story: "Usred si menjanja script.js za novu logiku menija — nesačuvano. Odjednom, hitno moraš da pređeš na main da ispraviš bag. Git ne dozvoljava prebacivanje sa nepripremljenim izmenama.",
+    whyItMatters: "stash privremeno sklanja radno stablo na stranu, tako da možeš promeniti granu, a potom vratiti izmene sa stash pop.",
+    task: "Privremeno sačuvaj svoje nesačuvane izmene na stranu sa git stash, a potom ih vrati sa git stash pop.",
+    hint1: "Koja komanda doslovno znači 'spremi na stranu' (stash), a koja ih vraća (pop)?",
+    hint2: "1. git stash\n2. git stash pop",
+    expectedResult: "git status prikazuje čist radni direktorijum nakon stash-a, a nakon stash pop izmene se vraćaju tačno tamo gde su bile.",
+    quickOverview: "git stash — privremeno sklanja nesačuvane izmene. git stash pop — vraća ih nazad.",
+    description: `### Priča
+Usred si menjanja \`script.js\` za novu logiku menija — nesačuvano, nedovršeno. Odjednom, hitno moraš da pređeš na \`main\` da ispraviš bag koji je Iva prijavila.
+
+### Zašto je ovo bitno
+Umesto da praviš "smeće" commit samo da bi promenio/la granu, \`stash\` privremeno sklanja izmene na stranu.`,
+    initialState: {
+      isInitialized: true,
+      commits: {
+        C1: { id: 'C1', parentIds: [], message: 'Kafić Luna baza' }
+      },
+      branches: { main: 'C1' },
+      head: { type: 'branch', target: 'main' },
+      index: { staged: [], deleted: [] },
+      workingDirectory: {
+        files: ['index.html', 'style.css', 'script.js', '.gitignore'],
+        modified: ['script.js'],
+        untracked: []
+      },
+      stash: [],
+      hasRemote: true
+    },
+    validate: (state: RepoState, commandsRun = []) => {
+      const hasStash = commandsRun.some(c => c.toLowerCase().includes('stash'));
+      return hasStash && (!state.stash || state.stash.length === 0);
+    },
+    expectedCommands: ["git stash"],
+    livePreview: { hasAbout: true, hasMenu: true, hasContact: true }
+  },
+  {
+    id: 20,
+    levelNumber: 2,
+    lessonNumber: 9,
+    title: "Lekcija 9: git commit --amend",
+    category: "Nivo 2: Srednji nivo",
+    story: "Upravo si commit-ovao/la sa porukom 'fix bag' — nejasno, i primetio/la si da si zaboravio/la da dodaš favicon.ico, koji je trebalo da bude deo istog commit-a.",
+    whyItMatters: "Za sitne tek napravljene greške ne mora se praviti nov commit. --amend ti omogućava da prepraviš poslednji commit kao da si ga od početka dobro napravio/la.",
+    task: "Dodaj zaboravljeni fajl favicon.ico i ispravi poruku poslednjeg commit-a bez pravljenja novog.",
+    hint1: "Dodaj favicon.ico pomoću git add, a zatim commit-uj uz opciju --amend.",
+    hint2: "git add favicon.ico\ngit commit --amend -m \"Popravi link ka meniju i dodaj favicon\"",
+    expectedResult: "Vizuelni Git Graf i dalje prikazuje isti broj commit-ova — poslednji je zamenjen ispravljenom verzijom. favicon.ico je postao deo commit-a i prikazuje se u Live Browseru!",
+    quickOverview: "git commit --amend — menja sadržaj i/ili poruku poslednjeg commit-a.",
+    description: `### Priča
+Upravo si commit-ovao/la sa porukom \`"fix bag"\` — nejasno, i primetio/la si da si zaboravio/la da dodaš \`favicon.ico\`, koji je trebalo da bude deo istog commit-a.
+
+### Zašto je ovo bitno
+\`--amend\` ti omogućava da "prepraviš" **poslednji** commit kao da si ga od početka dobro napravio/la.`,
+    initialState: {
+      isInitialized: true,
+      commits: {
+        C1: { id: 'C1', parentIds: [], message: 'Kafić Luna baza' },
+        C2: { id: 'C2', parentIds: ['C1'], message: 'fix bag', author: 'Luka' }
+      },
+      branches: { main: 'C2' },
+      head: { type: 'branch', target: 'main' },
+      index: { staged: [], deleted: [] },
+      workingDirectory: {
+        files: ['index.html', 'style.css', 'script.js', '.gitignore', 'favicon.ico'],
+        modified: [],
+        untracked: ['favicon.ico']
+      },
+      hasRemote: true
+    },
+    validate: (state: RepoState) => {
+      const cId = state.branches['main'];
+      const commit = state.commits[cId];
+      return commit && commit.message.toLowerCase() !== 'fix bag' && !state.workingDirectory.untracked.includes('favicon.ico');
+    },
+    expectedCommands: ["git add", "git commit"],
+    livePreview: { hasAbout: true, hasMenu: true, hasContact: true, hasFavicon: true }
+  },
+  {
+    id: 21,
+    levelNumber: 2,
+    lessonNumber: "Bonus A",
+    title: "Bonus Lekcija A: git tag",
+    category: "Nivo 2: Srednji nivo",
+    story: "Kafić Luna sajt je stigao do svoje prve 'zvanične' verzije — želiš da obeležiš tačno taj commit kao v1.0, da ga lako pronađeš kasnije.",
+    whyItMatters: "Tagovi služe kao trajne 'nalepnice' za verzije (releases) koje se lako pamte i referenciraju.",
+    task: "Obeleži trenutni commit oznakom verzije v1.0.",
+    hint1: "Koja komanda 'lepi nalepnicu' sa imenom na određeni commit?",
+    hint2: "git tag v1.0",
+    expectedResult: "Vizuelni Git Graf prikazuje oznaku 🏷️ v1.0 na poslednjem commit-u.",
+    quickOverview: "git tag <ime> — obeležava trenutni commit prepoznatljivim imenom.",
+    description: `### Priča
+Kafić Luna sajt je stigao do svoje prve "zvanične" verzije — želiš da obeležiš tačno taj commit kao \`v1.0\`, da ga lako pronađeš kasnije.`,
+    initialState: {
+      isInitialized: true,
+      commits: {
+        C1: { id: 'C1', parentIds: [], message: 'Kafić Luna baza' },
+        C2: { id: 'C2', parentIds: ['C1'], message: 'Popravi meni i dodaj favicon (Spremno za v1.0)' }
+      },
+      branches: { main: 'C2' },
+      head: { type: 'branch', target: 'main' },
+      index: { staged: [], deleted: [] },
+      workingDirectory: {
+        files: ['index.html', 'style.css', 'script.js', '.gitignore', 'favicon.ico'],
+        modified: [],
+        untracked: []
+      },
+      tags: {},
+      hasRemote: true
     },
     validate: (state: RepoState) => {
       return state.tags !== undefined && state.tags['v1.0'] !== undefined;
     },
-    expectedCommands: ["git tag"]
+    expectedCommands: ["git tag"],
+    livePreview: { hasAbout: true, hasMenu: true, hasContact: true, hasFavicon: true, tag: 'v1.0' }
   },
   {
-    id: 14,
-    title: "Kada se grane sukobe: Merge Konflikt",
-    category: "Konflikti i Saradnja",
-    description: `### Kada se grane sukobe: Merge Konflikt
-Kada spajate dve grane koje su menjale **istu liniju u istom fajlu**, Git ne može sam da odluči koja verzija je ispravna. U tom trenutku proces spajanja se zaustavlja i Git javlja **Merge Konflikt**.
-
-Git tada upisuje specijalne konfliktne oznake direktno u konfliktne fajlove:
-\`<<<<<<< HEAD\`
-Tvoja izmena
-\`=======\`
-Izmena sa druge grane
-\`>>>>>>> feature\`
-
-Zadatak programera je da:
-1. Otvori fajl i obriše konfliktne oznake, ostavljajući samo ispravan kod.
-2. Pripremi rešen fajl sa \`git add <fajl>\`.
-3. Dovrši spajanje sa \`git commit\`.
-
-**Tvoj zadatak:**
-Pokušali ste spajanje grane \`feature\` u \`master\` i dobili konflikt u fajlu \`glavna.py\`.
-1. Razrešite konflikt tako što ćete pripremiti fajl \`glavna.py\` za commit koristeći \`git add glavna.py\`.
-2. Dovršite merge commit sa porukom "Rešen konflikt" koristeći \`git commit -m "Rešen konflikt"\`.`,
-    hint: "Ukucaj redom:\n1. `git add glavna.py` da označiš konflikt kao rešen.\n2. `git commit -m \"Rešen konflikt\"` da dovršiš spajanje.",
+    id: 22,
+    levelNumber: 2,
+    lessonNumber: "Bonus B",
+    title: "Bonus Lekcija B: git diff grana1..grana2",
+    category: "Nivo 2: Srednji nivo",
+    story: "Pre nego što spojiš Ivinu novu granu, želiš unapred da vidiš sve razlike između nje i main, ne samo poslednju izmenu.",
+    whyItMatters: "Poređenje grana ti omogućava pregled kompletnog koda pre merge-a ili code review-a.",
+    task: "Uporedi dve grane direktno, bez da ijednu od njih menjaš ili spajaš.",
+    hint1: "Znaš git diff za radni direktorijum — ista komanda radi i sa imenima dve grane razdvojene sa ..",
+    hint2: "git diff main..kontakt-forma",
+    expectedResult: "Terminal ispisuje sve linije koda koje se razlikuju između dve grane.",
+    quickOverview: "git diff grana1..grana2 — prikazuje sve razlike između dve grane.",
+    description: `### Priča
+Pre nego što spojiš Ivinu novu granu, želiš unapred da vidiš *sve* razlike između nje i \`main\`, ne samo poslednju izmenu.`,
     initialState: {
+      isInitialized: true,
       commits: {
-        C0: { id: 'C0', parentIds: [], message: 'Zajednički predak' },
-        C1: { id: 'C1', parentIds: ['C0'], message: 'Izmena na masteru' },
-        C2: { id: 'C2', parentIds: ['C0'], message: 'Izmena na feature grani' }
+        C1: { id: 'C1', parentIds: [], message: 'Kafić Luna baza' },
+        C2: { id: 'C2', parentIds: ['C1'], message: 'Rad na main grani' },
+        C3: { id: 'C3', parentIds: ['C1'], message: 'Rad na kontakt-forma grani' }
       },
-      branches: { master: 'C1', feature: 'C2' },
-      head: { type: 'branch', target: 'master' },
+      branches: { main: 'C2', 'kontakt-forma': 'C3' },
+      head: { type: 'branch', target: 'main' },
       index: { staged: [], deleted: [] },
       workingDirectory: {
-        files: ['glavna.py'],
-        modified: ['glavna.py'],
-        untracked: []
-      },
-      hasRemote: false,
-      mergeInProgress: 'C2'
-    },
-    validate: (state: RepoState) => {
-      const commitIds = Object.keys(state.commits);
-      const masterCommitId = state.branches['master'];
-      const masterCommit = state.commits[masterCommitId];
-      return (
-        commitIds.length > 3 &&
-        masterCommit &&
-        masterCommit.parentIds.length >= 2 &&
-        state.index.staged.length === 0
-      );
-    },
-    expectedCommands: ["git add", "git commit"]
-  },
-  {
-    id: 15,
-    title: "Povezivanje grana sa serverom: Upstream",
-    category: "Konflikti i Saradnja",
-    description: `### Povezivanje grana sa serverom: Upstream
-Kada kreirate novu lokalnu granu, ona nema direktnu vezu sa udaljenim serverom. Kada pokušate da uradite \`git push\` ili \`git pull\`, Git neće znati na koju granu na serveru treba da pošalje ili preuzme promene.
-
-Da bismo povezali lokalnu granu sa udaljenom, koristimo opciju **\`-u\`** (ili \`--set-upstream-to\`):
-\`git branch -u origin/master\` ili \`git push -u origin feature\`
-
-Ovo stvara trajnu vezu, pa ubuduće možete samo kucati jednostavne komande \`git push\` i \`git pull\` bez ikakvih argumenata!
-
-**Tvoj zadatak:**
-1. Postavite upstream vezu za vašu trenutnu lokalnu granu \`master\` tako da prati udaljenu granu \`origin/master\` koristeći \`git branch -u origin/master\`.`,
-    hint: "Samo ukucaj:\n`git branch -u origin/master` da povežeš granu sa serverom.",
-    initialState: {
-      commits: {
-        C0: { id: 'C0', parentIds: [], message: 'Inicijalni commit' }
-      },
-      branches: { master: 'C0' },
-      head: { type: 'branch', target: 'master' },
-      index: { staged: [], deleted: [] },
-      workingDirectory: {
-        files: ['readme.txt'],
+        files: ['index.html', 'style.css', 'script.js', '.gitignore', 'favicon.ico'],
         modified: [],
         untracked: []
-      },
-      remoteCommits: {
-        C0: { id: 'C0', parentIds: [], message: 'Inicijalni commit', isRemote: true }
-      },
-      remoteBranches: {
-        'origin/master': 'C0'
       },
       hasRemote: true
     },
-    validate: () => {
-      return true;
+    validate: (_state: RepoState, commandsRun = []) => {
+      return commandsRun.some(c => c.toLowerCase().includes('diff'));
     },
-    expectedCommands: ["git branch"]
+    expectedCommands: ["git diff"],
+    livePreview: { hasAbout: true, hasMenu: true, hasContact: true, hasFavicon: true, tag: 'v1.0' }
   },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // NIVO 3: NAPREDNI NIVO — GIT REMOTE NA GITHUB-U (VIDEO LEKCIJA)
+  // ═══════════════════════════════════════════════════════════════════════════
   {
-    id: 16,
-    title: "Uređivanje istorije: Interaktivni Rebase",
-    category: "Konflikti i Saradnja",
-    description: `### Uređivanje istorije: Interaktivni Rebase
-Pre nego što pošaljete svoj kod celom timu na server, korisno je da "počistite" svoju istoriju commit-ova - na primer, spojite sitne popravke u jedan smislen commit, izmenite poruke, ili obrišete nepotrebne commit-e.
+    id: 23,
+    levelNumber: 3,
+    lessonNumber: 0,
+    title: "Nivo 3: Git Remote & GitHub (Video Lekcija)",
+    category: "Nivo 3: Video lekcija",
+    isReadingOnly: true,
+    story: "Nivo 3 uvodi pravi GitHub — remote koji do sad nije bio stvaran postaje stvaran, uz clone, fork/PR radni tok i code review sa AI asistentima.",
+    whyItMatters: "Ovaj nivo predstavlja video vodič kroz povezivanje na pravi GitHub, kreiranje repozitorijuma, SSH ključeve i timski rad. Nema zadataka niti hintova — možeš pogledati video ili preuzeti sertifikat!",
+    task: "Pogledaj video lekciju za rad sa pravim GitHub repozitorijumom i vibecoding saradnju.",
+    hint1: "Nivo 3 nema zadataka ni hintova. Namenjen je za video demonstraciju.",
+    hint2: "Možeš pogledati video materijal ili kliknuti na 'Završi i preuzmi sertifikat'.",
+    expectedResult: "Prikaz video plejera i vodiča za GitHub platformu.",
+    quickOverview: "GitHub — platforma za deljenje koda, Pull Requests (PR), Fork, i saradnju na Git repozitorijumima.",
+    description: `### Nivo 3: Git Remote na GitHub Platformi (Video Lekcija)
 
-To radimo pomoću **\`git rebase -i <commit-id>\`** (opcija \`-i\` znači interaktivno).
-Ova komanda otvara retro editor gde za svaki commit možete izabrati akciju:
-*   \`pick\` - zadrži commit
-*   \`reword\` - promeni samo poruku commit-a
-*   \`squash\` - spoji ovaj commit sa prethodnim
+Dobrodošli u završni nivo kursa! U ovom nivou prelazimo sa simuliranog lokalnog okruženja na **pravi GitHub**.
 
-**Tvoj zadatak:**
-1. Pokrenite interaktivni rebase na granu \`master\` koristeći \`git rebase -i master\`.`,
-    hint: "Nalaziš se na feature grani. Samo ukucaj:\n`git rebase -i master`",
+**Teme koje se obrađuju u video lekciji:**
+*   **Kreiranje repozitorijuma na GitHub-u** (Public vs Private, README, licenca)
+*   **Autentifikacija** (SSH ključevi i Personal Access Tokens)
+*   **Povezivanje lokalnog projekta:**
+    \`\`\`bash
+    git remote add origin https://github.com/korisnik/kafic-luna.git
+    git branch -M main
+    git push -u origin main
+    \`\`\`
+*   **Kloniranje tuđih projekata:** \`git clone <url>\`
+*   **Pull Requests (PR) i Fork radni tok** — kako se doprinosi tuđem kodu
+*   **Code Review i Vibecoding** — integracija AI alata u Git radni tok
+
+*Napomena: Ovaj nivo je video formata bez automatskih zadataka. Možeš slobodno pogledati video klip i preuzeti svoj zvanični sertifikat.*`,
     initialState: {
+      isInitialized: true,
       commits: {
-        C0: { id: 'C0', parentIds: [], message: 'Zajednički predak' },
-        C1: { id: 'C1', parentIds: ['C0'], message: 'Commit na masteru' },
-        C2: { id: 'C2', parentIds: ['C0'], message: 'Sitna izmena 1' },
-        C3: { id: 'C3', parentIds: ['C2'], message: 'Sitna izmena 2' }
+        C1: { id: 'C1', parentIds: [], message: 'Kafić Luna v1.0 produkcija' }
       },
-      branches: { master: 'C1', feature: 'C3' },
-      head: { type: 'branch', target: 'feature' },
+      branches: { main: 'C1' },
+      head: { type: 'branch', target: 'main' },
       index: { staged: [], deleted: [] },
       workingDirectory: {
-        files: ['readme.txt'],
+        files: ['index.html', 'style.css', 'script.js', '.gitignore', 'favicon.ico'],
         modified: [],
         untracked: []
       },
-      hasRemote: false
+      tags: { 'v1.0': 'C1' },
+      hasRemote: true
     },
-    validate: () => {
-      return true;
-    },
-    expectedCommands: ["git rebase"]
-  },
-  {
-    id: 17,
-    title: "Brza popravka poslednjeg commit-a",
-    category: "Napredne Komande",
-    description: `### Brza popravka poslednjeg commit-a
-Napravili ste commit, ali ste sekundu kasnije shvatili da ste zaboravili da dodate jedan fajl ili ste napravili slovnu grešku u poruci commit-a? Bez brige, nema potrebe da pravite novu "vremensku kapsulu" za tako sitnu izmenu.
-
-Komanda **\`git commit --amend\`** vam omogućava da "otvorite" poslednji commit, dodate nove pripremljene fajlove u njega i izmenite njegovu poruku!
-
-*Zlatno pravilo:* Koristite \`--amend\` samo za lokalne commit-e koje još niste poslali na udaljeni server!
-
-**Tvoj zadatak:**
-1. Imate pripremljen fajl \`readme.txt\`.
-2. Prepravite poslednji commit dodavanjem tog fajla i promenite mu poruku u "Ispravljen inicijalni rad" koristeći \`git commit --amend -m "Ispravljen inicijalni rad"\`.`,
-    hint: "Zadatak zahteva tačnu komandu:\n`git commit --amend -m \"Ispravljen inicijalni rad\"`",
-    initialState: {
-      commits: {
-        C0: { id: 'C0', parentIds: [], message: 'Inicijalni rad sa greškom' }
-      },
-      branches: { master: 'C0' },
-      head: { type: 'branch', target: 'master' },
-      index: { staged: ['readme.txt'], deleted: [] },
-      workingDirectory: {
-        files: ['readme.txt'],
-        modified: [],
-        untracked: []
-      },
-      hasRemote: false
-    },
-    validate: (state: RepoState) => {
-      const currentCommit = state.head.type === 'branch' ? state.branches[state.head.target] : state.head.target;
-      const msg = state.commits[currentCommit]?.message || '';
-      return msg.toLowerCase().trim() === 'ispravljen inicijalni rad' && state.index.staged.length === 0;
-    },
-    expectedCommands: ["git commit"]
-  },
-  {
-    id: 18,
-    title: "Spasavanje obrisanog koda sa git reflog",
-    category: "Napredne Komande",
-    description: `### Spasavanje obrisanog koda sa git reflog
-U Git-u je izuzetno teško trajno izgubiti podatke kada su jednom commit-ovani. Čak i ako greškom obrišete granu ili uradite \`git reset --hard\` na pogrešan commit, Git potajno pamti svaku vašu akciju!
-
-Komanda **\`git reflog\`** (reference log) prikazuje kompletan istorijski dnevnik pomeranja vašeg \`HEAD\` pokazivača.
-Svaki put kada promenite granu, napravite commit, uradite reset ili rebase, ovde se upisuje zapis. Iz ovog dnevnika možete saznati SHA1 heš bilo kog commit-a koji ste naizgled trajno izgubili i vratiti se na njega sa \`git reset --hard\`!
-
-**Tvoj zadatak:**
-1. Otvorite istorijski dnevnik kretanja HEAD-a koristeći komandu \`git reflog\`.`,
-    hint: "Samo ukucaj:\n`git reflog` da pogledaš dnevnik akcija.",
-    initialState: {
-      commits: {
-        C0: { id: 'C0', parentIds: [], message: 'Inicijalni commit' },
-        C1: { id: 'C1', parentIds: ['C0'], message: 'Novi feature' }
-      },
-      branches: { master: 'C1' },
-      head: { type: 'branch', target: 'master' },
-      index: { staged: [], deleted: [] },
-      workingDirectory: {
-        files: ['readme.txt'],
-        modified: [],
-        untracked: []
-      },
-      hasRemote: false
-    },
-    validate: () => {
-      return true;
-    },
-    expectedCommands: ["git reflog"]
-  },
-  {
-    id: 19,
-    title: "Pronalaženje bagova binarnom pretragom",
-    category: "Napredne Komande",
-    description: `### Pronalaženje bagova binarnom pretragom
-Imate ogroman projekat sa stotinama commit-ova i shvatili ste da neka funkcija više ne radi. Bag je uveden negde u prošlosti, ali nemate pojma u kom tačno commit-u.
-
-Umesto da ručno proveravate svaki commit jedan po jedan, koristite **\`git bisect\`** koji koristi algoritam binarne pretrage da brzo i automatski locira "prvi loš commit" (first bad commit):
-1.  \`git bisect start\` - Pokreće pretragu.
-2.  \`git bisect bad\` - Označava trenutni commit kao neispravan.
-3.  \`git bisect good <commit>\` - Označava neki stari commit u prošlosti za koji znate da je sigurno radio ispravno.
-Git će vas automatski prebaciti na commit na polovini tog opsega. Vi testirate kod i javljate Git-u sa \`git bisect good\` ili \`git bisect bad\`. Ovaj proces se ponavlja dok ne pronađe tačan commit koji je uveo bag!
-
-**Tvoj zadatak:**
-1. Pokrenite proces pretrage sa \`git bisect start\`.
-2. Označite trenutni commit kao loš sa \`git bisect bad\`.
-3. Označite commit \`C0\` kao dobar sa \`git bisect good C0\`.`,
-    hint: "Ukucaj redom:\n1. `git bisect start` da pokreneš pretragu.\n2. `git bisect bad` da označiš trenutni kao loš.\n3. `git bisect good C0` da označiš C0 kao ispravnu tačku.",
-    initialState: {
-      commits: {
-        C0: { id: 'C0', parentIds: [], message: 'Inicijalni stabilni rad' },
-        C1: { id: 'C1', parentIds: ['C0'], message: 'Uvedena greška' },
-        C2: { id: 'C2', parentIds: ['C1'], message: 'Rad na dizajnu' },
-        C3: { id: 'C3', parentIds: ['C2'], message: 'Trenutni neispravan rad' }
-      },
-      branches: { master: 'C3' },
-      head: { type: 'branch', target: 'master' },
-      index: { staged: [], deleted: [] },
-      workingDirectory: {
-        files: ['readme.txt'],
-        modified: [],
-        untracked: []
-      },
-      hasRemote: false
-    },
-    validate: () => {
-      return true;
-    },
-    expectedCommands: ["git bisect start", "git bisect bad", "git bisect good c0"]
+    validate: () => true,
+    expectedCommands: [],
+    livePreview: { hasAbout: true, hasMenu: true, hasContact: true, hasFavicon: true, tag: 'v1.0' }
   }
 ];

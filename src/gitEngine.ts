@@ -2,10 +2,13 @@ export interface Commit {
   id: string;
   parentIds: string[];
   message: string;
+  author?: string;
+  date?: string;
   isRemote?: boolean;
 }
 
 export interface RepoState {
+  isInitialized?: boolean;
   commits: { [id: string]: Commit };
   branches: { [name: string]: string }; // branch name -> commit id
   head: {
@@ -20,27 +23,89 @@ export interface RepoState {
     files: string[];
     modified: string[];
     untracked: string[];
+    ignored?: string[];
   };
+  fileContents?: { [filename: string]: string };
+  gitignorePatterns?: string[];
   // Remote repository state
   remoteCommits?: { [id: string]: Commit };
   remoteBranches?: { [name: string]: string };
   hasRemote?: boolean;
-  stash?: { staged: string[]; modified: string[]; untracked: string[]; }[];
+  stash?: { staged: string[]; modified: string[]; untracked: string[]; fileContents?: { [f: string]: string } }[];
   tags?: { [name: string]: string };
-  mergeInProgress?: string;
+  mergeInProgress?: { branch: string; commitId: string; conflictFile?: string };
 }
 
-// Inicijalno prazno stanje
+// Inicijalno prazno stanje za Kafić Luna
 export const createEmptyState = (): RepoState => {
   return {
+    isInitialized: false,
     commits: {},
     branches: {},
-    head: { type: 'commit', target: '' },
+    head: { type: 'branch', target: '' },
     index: { staged: [], deleted: [] },
     workingDirectory: {
-      files: [],
+      files: ['index.html', 'style.css', 'script.js'],
       modified: [],
-      untracked: []
+      untracked: ['index.html', 'style.css', 'script.js'],
+      ignored: []
+    },
+    fileContents: {
+      'index.html': `<!DOCTYPE html>
+<html lang="sr">
+<head>
+  <meta charset="UTF-8">
+  <title>Kafić Luna</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>☕ Kafić Luna</h1>
+    <nav>
+      <a href="#pocetna">Početna</a>
+    </nav>
+  </header>
+  <main>
+    <section id="pocetna">
+      <h2>Dobrodošli u Kafić Luna</h2>
+      <p>Mesto gde se miris sveže mlevene kafe spaja sa prijatnom atmosferom.</p>
+    </section>
+  </main>
+  <script src="script.js"></script>
+</body>
+</html>`,
+      'style.css': `body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #fdfaf6;
+  color: #3d2b1f;
+  margin: 0;
+  padding: 0;
+}
+header {
+  background: linear-gradient(135deg, #4a2c11 0%, #2b1704 100%);
+  color: #f5eedc;
+  padding: 20px;
+  text-align: center;
+}
+nav a {
+  color: #d4a373;
+  margin: 0 15px;
+  text-decoration: none;
+  font-weight: 600;
+}
+.btn-narucivanje {
+  background-color: #d4a373;
+  color: #2b1704;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+}`,
+      'script.js': `console.log("Kafić Luna sajt uspešno učitan!");
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("Dobrodošli u Kafić Luna!");
+});`
     },
     hasRemote: false
   };
@@ -71,7 +136,6 @@ export const findCommonAncestor = (
 
   const ancestorsA = getAncestors(commitA);
   
-  // Šetamo se unazad kroz pretke od B i tražimo prvog koji je u ancestorsA
   const queue = [commitB];
   const visitedB = new Set<string>();
   
@@ -94,30 +158,9 @@ export const findCommonAncestor = (
   return null;
 };
 
-// Vraća listu commit-a od startId do endId (isključujući startId, uključujući endId)
-export const getCommitPath = (
-  commits: { [id: string]: Commit },
-  startId: string,
-  endId: string
-): string[] => {
-  const path: string[] = [];
-  let currentId = endId;
-  
-  while (currentId && currentId !== startId) {
-    path.unshift(currentId);
-    const commit = commits[currentId];
-    if (!commit || commit.parentIds.length === 0) {
-      break;
-    }
-    currentId = commit.parentIds[0]; // Pratimo prvu granu roditelja
-  }
-  
-  return path;
-};
-
-// Generiše novi ID za commit (C0, C1, C2...)
+// Generiše novi ID za commit (C1, C2, C3...)
 export const generateNextCommitId = (commits: { [id: string]: Commit }): string => {
-  let index = 0;
+  let index = 1;
   while (commits[`C${index}`]) {
     index++;
   }
@@ -132,6 +175,14 @@ export const getCurrentCommitId = (state: RepoState): string => {
   return state.head.target;
 };
 
+// Helper to check if file matches gitignore patterns
+export const isFileIgnored = (filename: string, patterns: string[] = []): boolean => {
+  return patterns.some(p => {
+    const cleanPattern = p.trim().replace(/\/$/, '');
+    return filename === cleanPattern || filename.startsWith(cleanPattern + '/') || filename === p.trim();
+  });
+};
+
 // Izvršavanje git komande nad stanjem i vraćanje novog stanja i ispisa terminala
 export const executeGitCommand = (
   state: RepoState,
@@ -142,12 +193,84 @@ export const executeGitCommand = (
     return { newState: state, output: '', error: false };
   }
 
+  // Handle linux / unix commands like 'ls', 'pwd', 'cat', 'touch', 'clear' gracefully
+  if (trimmed === 'clear') {
+    return { newState: state, output: '', error: false };
+  }
+  if (trimmed === 'ls' || trimmed === 'ls -la' || trimmed === 'dir') {
+    const files = state.workingDirectory.files.slice();
+    if (state.isInitialized || Object.keys(state.commits).length > 0) {
+      files.unshift('.git');
+    }
+    return {
+      newState: state,
+      output: `kafic-luna/\n${files.map(f => `  ${f.endsWith('/') ? '📁' : '📄'} ${f}`).join('\n')}`,
+      error: false
+    };
+  }
+  if (trimmed.startsWith('cat ')) {
+    const targetFile = trimmed.replace(/^cat\s+/, '').trim();
+    const content = state.fileContents?.[targetFile];
+    if (content !== undefined) {
+      return { newState: state, output: content, error: false };
+    }
+    return { newState: state, output: `cat: ${targetFile}: Nema takvog fajla ili direktorijuma`, error: true };
+  }
+  if (trimmed.startsWith('echo ')) {
+    const isAppend = trimmed.includes('>>');
+    const isOverwrite = !isAppend && trimmed.includes('>');
+    if (isAppend || isOverwrite) {
+      const parts = trimmed.split(isAppend ? '>>' : '>');
+      const rawText = parts[0].replace(/^echo\s+/, '').trim().replace(/^["']|["']$/g, '');
+      const targetFile = parts[1].trim().replace(/^["']|["']$/g, '');
+
+      let updatedContent = state.fileContents?.[targetFile] || '';
+      if (isAppend) {
+        updatedContent = updatedContent ? `${updatedContent.trimEnd()}\n${rawText}\n` : `${rawText}\n`;
+      } else {
+        updatedContent = `${rawText}\n`;
+      }
+
+      let updatedPatterns = state.gitignorePatterns ? [...state.gitignorePatterns] : [];
+      let updatedUntracked = [...state.workingDirectory.untracked];
+      let updatedIgnored = state.workingDirectory.ignored ? [...state.workingDirectory.ignored] : [];
+
+      if (targetFile === '.gitignore') {
+        const newLines = updatedContent.split('\n').map(l => l.trim()).filter(Boolean);
+        updatedPatterns = Array.from(new Set([...updatedPatterns, ...newLines]));
+        updatedUntracked = state.workingDirectory.untracked.filter(f => !isFileIgnored(f, updatedPatterns));
+        updatedIgnored = state.workingDirectory.files.filter(f => isFileIgnored(f, updatedPatterns));
+      }
+
+      const newState: RepoState = {
+        ...state,
+        fileContents: {
+          ...state.fileContents,
+          [targetFile]: updatedContent
+        },
+        gitignorePatterns: targetFile === '.gitignore' ? updatedPatterns : state.gitignorePatterns,
+        workingDirectory: {
+          ...state.workingDirectory,
+          files: Array.from(new Set([...state.workingDirectory.files, targetFile])),
+          untracked: updatedUntracked,
+          ignored: updatedIgnored
+        }
+      };
+
+      return {
+        newState,
+        output: `Upisano '${rawText}' u ${targetFile}.`,
+        error: false
+      };
+    }
+  }
+
   // Parsiranje argumenata
   const parts = trimmed.split(/\s+/);
   if (parts[0] !== 'git') {
     return {
       newState: state,
-      output: `Komanda '${parts[0]}' nije prepoznata. Da li ste mislili 'git'?`,
+      output: `Komanda '${parts[0]}' nije prepoznata. U ovoj aplikaciji vežbamo Git komande koje počinju sa 'git'.`,
       error: true
     };
   }
@@ -161,12 +284,12 @@ export const executeGitCommand = (
     };
   }
 
-  // 0. Provera da li je repo inicijalizovan (osim za 'init', 'clone', 'help')
-  const isInitialized = Object.keys(state.commits).length > 0 || state.head.target !== '' || state.branches['master'] !== undefined;
+  const isInitialized = state.isInitialized === true || Object.keys(state.commits).length > 0 || state.head.target !== '' || state.branches['main'] !== undefined || state.branches['master'] !== undefined;
+
   if (!isInitialized && !['init', 'clone', 'help'].includes(subCmd)) {
     return {
       newState: state,
-      output: `fatal: nije git repozitorijum (ili bilo koji od roditeljskih direktorijuma): .git\nInicijalizujte repozitorijum pomoću 'git init'.`,
+      output: `fatal: nije git repozitorijum (ili bilo koji od roditeljskih direktorijuma): .git\nInicijalizujte repozitorijum pomoću komande 'git init'.`,
       error: true
     };
   }
@@ -175,22 +298,26 @@ export const executeGitCommand = (
     case 'help': {
       return {
         newState: state,
-        output: `Podržane Git komande na ovoj platformi:
-  init          Inicijalizuje novi prazan repozitorijum
-  status        Prikazuje stanje radnog stabla i pripremne zone (index)
-  add <fajl>    Dodaje fajlove u pripremnu zonu (staging area)
-  commit -m "p" Snima pripremljene promene u istoriju
-  branch <ime>  Prikazuje, kreira ili briše grane
-  checkout <g>  Prebacuje se na drugu granu ili commit (takođe i 'git switch')
-  merge <grana> Spaja promene iz druge grane u trenutnu granu
-  rebase <gran> Ponovo bazira trenutnu istoriju na vrh druge grane
-  cherry-pick <c> Kopira commit na trenutni vrh
-  reset <c>     Vraća stanje na određeni commit (opcija --hard)
-  revert <c>    Pravi novi commit koji poništava promene prosleđenog commit-a
-  clone <url>   Klonira udaljeni repozitorijum
-  fetch         Preuzima promene sa udaljenog repozitorijuma
-  pull          Preuzima i spaja promene sa servera (fetch + merge)
-  push          Šalje lokalne promene na udaljeni repozitorijum`,
+        output: `Podržane Git komande u projektu "Kafić Luna":
+  init                  Inicijalizuje novi prazan repozitorijum na grani 'main'
+  status                Prikazuje stanje radnog stabla i pripremne zone (staging area)
+  add <fajl> / add .    Dodaje fajlove u pripremnu zonu (staging area)
+  commit -m "poruka"    Snima pripremljene promene u istoriju
+  commit --amend        Ispravlja poslednji commit i ažurira poruku / fajlove
+  log                   Ispisuje hronološku listu commit-ova
+  log --oneline --graph --all  Prikazuje sažetu ASCII grafičku istoriju svih grana
+  diff                  Prikazuje razlike u fajlovima (ili diff između grana: git diff g1..g2)
+  branch <ime>          Prikazuje ili kreira novu granu
+  switch <grana>        Prebacuje se na drugu granu (git switch -c <ime> kreira i prebacuje)
+  checkout <grana>      Prebacuje granu ili fajl (git checkout -b <ime>)
+  merge <grana>         Spaja navedenu granu u trenutnu granu
+  restore <fajl>        Odbacuje nesačuvane lokalne promene u radnom direktorijumu
+  reset <fajl>          Uklanja fajl iz pripremne zone (staging)
+  revert <commit>       Pravi nov commit koji poništava prethodne izmene
+  stash / stash pop     Privremeno sklanja nesačuvane izmene na stranu i vraća ih
+  tag <ime>             Obeležava commit oznakom (npr. v1.0)
+  push origin main      Šalje lokalne commit-ove na udaljeni repozitorijum
+  pull origin main      Preuzima i spaja najnovije izmene sa udaljenog repozitorijuma`,
         error: false
       };
     }
@@ -199,26 +326,32 @@ export const executeGitCommand = (
       if (isInitialized) {
         return {
           newState: state,
-          output: `Reinicijalizovan postojeći Git repozitorijum.`,
+          output: `Reinicijalizovan postojeći Git repozitorijum u /kafic-luna/.git/`,
           error: false
         };
       }
-      
-      const newState = {
+
+      const initialFiles = state.workingDirectory.files.length > 0
+        ? state.workingDirectory.files
+        : ['index.html', 'style.css', 'script.js'];
+
+      const newState: RepoState = {
         ...state,
+        isInitialized: true,
         commits: {},
-        branches: { master: '' },
-        head: { type: 'branch' as const, target: 'master' },
+        branches: { main: '' },
+        head: { type: 'branch', target: 'main' },
         workingDirectory: {
-          files: ['readme.txt'],
+          files: initialFiles,
           modified: [],
-          untracked: ['readme.txt']
+          untracked: [...initialFiles],
+          ignored: []
         }
       };
-      
+
       return {
         newState,
-        output: `Inicijalizovan prazan Git repozitorijum u .git/`,
+        output: `Inicijalizovan prazan Git repozitorijum u /kafic-luna/.git/\nKreirana primarna grana 'main'.`,
         error: false
       };
     }
@@ -232,368 +365,489 @@ export const executeGitCommand = (
         out += `U stanju 'detached HEAD' na commit-u ${state.head.target}\n`;
       }
 
-      const staged = state.index.staged;
-      const untracked = state.workingDirectory.untracked;
+      const patterns = state.gitignorePatterns || [];
+      const staged = state.index.staged.filter(f => !isFileIgnored(f, patterns));
+      const modified = state.workingDirectory.modified.filter(f => !isFileIgnored(f, patterns));
+      const untracked = state.workingDirectory.untracked.filter(f => !isFileIgnored(f, patterns));
 
-      if (staged.length === 0 && untracked.length === 0) {
-        out += `Nema promena za commit (radno stablo je čisto)`;
+      if (state.mergeInProgress) {
+        out += `U toku je spajanje (merge) grane '${state.mergeInProgress.branch}'.\n`;
+        if (state.mergeInProgress.conflictFile) {
+          out += `  (popravite konflikte i pokrenite "git commit")\n`;
+          out += `  (koristite "git merge --abort" da biste prekinuli spajanje)\n\n`;
+          out += `Nerešeni konflikti:\n  (koristite "git add <fajl>..." da označite rešenje)\n`;
+          out += `\tobostrano izmenjeno:   ${state.mergeInProgress.conflictFile}\n\n`;
+        }
+      }
+
+      if (staged.length === 0 && modified.length === 0 && untracked.length === 0 && !state.mergeInProgress) {
+        out += `Nema promena za commit (radni direktorijum je čist)`;
       } else {
         if (staged.length > 0) {
-          out += `Promene za commit:\n  (koristite "git reset HEAD <fajl>..." da biste uklonili iz pripremne zone)\n\n`;
+          out += `Promene pripremljene za commit (Changes to be committed):\n  (koristite "git reset HEAD <fajl>..." da biste uklonili iz pripremne zone)\n\n`;
           staged.forEach(f => {
-            out += `\tnovi fajl:   ${f}\n`;
+            out += `\tzeleno:   novi/izmenjen fajl: ${f}\n`;
+          });
+          out += `\n`;
+        }
+        if (modified.length > 0) {
+          out += `Izmene koje nisu pripremljene za commit (Changes not staged for commit):\n  (koristite "git add <fajl>..." da pripremite)\n  (koristite "git restore <fajl>..." da odbacite izmene u radnom direktorijumu)\n\n`;
+          modified.forEach(f => {
+            out += `\tžuto:     izmenjeno:   ${f}\n`;
           });
           out += `\n`;
         }
         if (untracked.length > 0) {
-          out += `Nepraćeni fajlovi:\n  (koristite "git add <fajl>..." da biste ih uključili u ono što će biti commit-ovano)\n\n`;
+          out += `Nepraćeni fajlovi (Untracked files):\n  (koristite "git add <fajl>..." da biste ih uključili u ono što će biti commit-ovano)\n\n`;
           untracked.forEach(f => {
-            out += `\t${f}\n`;
+            out += `\tcrveno:   ${f}\n`;
           });
+          out += `\n`;
         }
       }
-      return { newState: state, output: out, error: false };
+
+      return { newState: state, output: out.trimEnd(), error: false };
     }
 
     case 'add': {
-      const fileArg = parts[2];
-      if (!fileArg) {
-        return { newState: state, output: `fatal: nije prosleđena putanja do fajla.`, error: true };
+      const target = parts.slice(2).join(' ').trim();
+      if (!target) {
+        return {
+          newState: state,
+          output: `fatal: ništa nije navedeno, ništa dodato.\nMožda ste hteli da kažete 'git add .'?`,
+          error: true
+        };
       }
 
-      if (fileArg === '.' || fileArg === '-A') {
-        // Dodaj sve untracked u staged
-        const allUntracked = [...state.workingDirectory.untracked];
-        if (allUntracked.length === 0) {
-          return { newState: state, output: `Nema novih fajlova za dodavanje.`, error: false };
-        }
-        const newState = {
+      const patterns = state.gitignorePatterns || [];
+      const newStaged = new Set(state.index.staged);
+      const newUntracked = [...state.workingDirectory.untracked];
+      const newModified = [...state.workingDirectory.modified];
+      let filesAdded: string[] = [];
+
+      if (target === '.' || target === '-A' || target === '--all') {
+        const eligibleUntracked = newUntracked.filter(f => !isFileIgnored(f, patterns));
+        const eligibleModified = newModified.filter(f => !isFileIgnored(f, patterns));
+
+        eligibleUntracked.forEach(f => {
+          newStaged.add(f);
+          filesAdded.push(f);
+        });
+        eligibleModified.forEach(f => {
+          newStaged.add(f);
+          filesAdded.push(f);
+        });
+
+        const remainingUntracked = newUntracked.filter(f => isFileIgnored(f, patterns));
+        const remainingModified = newModified.filter(f => isFileIgnored(f, patterns));
+
+        const newState: RepoState = {
           ...state,
-          index: {
-            ...state.index,
-            staged: Array.from(new Set([...state.index.staged, ...allUntracked]))
-          },
+          index: { ...state.index, staged: Array.from(newStaged) },
           workingDirectory: {
             ...state.workingDirectory,
-            untracked: []
+            untracked: remainingUntracked,
+            modified: remainingModified
           }
         };
+
         return {
           newState,
-          output: `Dodato ${allUntracked.length} fajlova u pripremnu zonu.`,
-          error: false
-        };
-      } else {
-        // Dodaj specifičan fajl
-        if (!state.workingDirectory.files.includes(fileArg) && !state.workingDirectory.untracked.includes(fileArg)) {
-          return { newState: state, output: `fatal: fajl '${fileArg}' ne postoji.`, error: true };
-        }
-        const newState = {
-          ...state,
-          index: {
-            ...state.index,
-            staged: Array.from(new Set([...state.index.staged, fileArg]))
-          },
-          workingDirectory: {
-            ...state.workingDirectory,
-            untracked: state.workingDirectory.untracked.filter(f => f !== fileArg)
-          }
-        };
-        return {
-          newState,
-          output: `Dodat fajl '${fileArg}' u pripremnu zonu.`,
+          output: filesAdded.length > 0
+            ? `Dodato ${filesAdded.length} fajlova u staging zonu:\n${filesAdded.map(f => `  + ${f}`).join('\n')}`
+            : `Nema novih izmena za dodavanje.`,
           error: false
         };
       }
+
+      const fileToAdd = target.replace(/^["']|["']$/g, '');
+      const isUntracked = newUntracked.includes(fileToAdd);
+      const isModified = newModified.includes(fileToAdd);
+      const isKnownFile = state.workingDirectory.files.includes(fileToAdd) || fileToAdd === '.gitignore' || fileToAdd === 'favicon.ico' || fileToAdd === 'test-fajl.txt';
+
+      if (!isUntracked && !isModified && !isKnownFile) {
+        return {
+          newState: state,
+          output: `fatal: putanja '${fileToAdd}' se ne poklapa ni sa jednim fajlom.`,
+          error: true
+        };
+      }
+
+      newStaged.add(fileToAdd);
+      const updatedUntracked = newUntracked.filter(f => f !== fileToAdd);
+      const updatedModified = newModified.filter(f => f !== fileToAdd);
+
+      const allFiles = Array.from(new Set([...state.workingDirectory.files, fileToAdd]));
+
+      // If resolving conflict in index.html
+      let newMerge = state.mergeInProgress;
+      if (newMerge && (fileToAdd === 'index.html' || fileToAdd === newMerge.conflictFile)) {
+        newMerge = { ...newMerge, conflictFile: undefined };
+      }
+
+      const newState: RepoState = {
+        ...state,
+        index: { ...state.index, staged: Array.from(newStaged) },
+        workingDirectory: {
+          ...state.workingDirectory,
+          files: allFiles,
+          untracked: updatedUntracked,
+          modified: updatedModified
+        },
+        mergeInProgress: newMerge
+      };
+
+      return {
+        newState,
+        output: `Fajl '${fileToAdd}' je dodat u staging zonu (spreman za commit).`,
+        error: false
+      };
     }
 
     case 'commit': {
-      const hasAmend = parts.includes('--amend');
-
-      // Provera -m parametra
-      const mIdx = parts.indexOf('-m');
+      const isAmend = parts.includes('--amend');
       let msg = '';
+      const mIdx = parts.indexOf('-m');
       if (mIdx !== -1 && parts[mIdx + 1]) {
-        // Spajamo sve argumente posle -m u jednu poruku ako ima navodnika
-        const fullString = parts.slice(mIdx + 1).join(' ');
-        msg = fullString.replace(/['"]/g, '').replace(/--amend/g, '').trim();
-      } else if (!hasAmend) {
-        return {
-          newState: state,
-          output: `error: morate proslediti poruku commit-a koristeći -m "poruka".`,
-          error: true
-        };
+        const fullMsgPart = commandLine.substring(commandLine.indexOf('-m') + 2).trim();
+        const match = fullMsgPart.match(/^["']([^"']*)["']/);
+        msg = match ? match[1] : parts.slice(mIdx + 1).join(' ').replace(/^["']|["']$/g, '');
       }
 
-      if (hasAmend) {
-        const currentCommit = getCurrentCommitId(state);
-        if (!currentCommit || !state.commits[currentCommit]) {
+      const currentBranch = state.head.type === 'branch' ? state.head.target : 'main';
+      const currentCommitId = state.branches[currentBranch] || (state.head.type === 'commit' ? state.head.target : '');
+
+      if (isAmend) {
+        if (!currentCommitId || !state.commits[currentCommitId]) {
           return {
             newState: state,
-            output: `fatal: nema commit-a za izmenu.`,
+            output: `fatal: nema commit-a za prepravku (amend).`,
             error: true
           };
         }
-        const lastCommit = state.commits[currentCommit];
-        const updatedCommit: Commit = {
-          ...lastCommit,
-          message: msg || lastCommit.message
+
+        const oldCommit = state.commits[currentCommitId];
+        const finalMsg = msg || oldCommit.message;
+        const amendedCommit: Commit = {
+          ...oldCommit,
+          message: finalMsg
         };
-        const updatedCommits = { ...state.commits, [currentCommit]: updatedCommit };
+
         const newState: RepoState = {
           ...state,
-          commits: updatedCommits,
-          index: { staged: [], deleted: [] },
-          workingDirectory: {
-            ...state.workingDirectory,
-            files: Array.from(new Set([...state.workingDirectory.files, ...state.index.staged])),
-            untracked: []
-          }
+          commits: {
+            ...state.commits,
+            [currentCommitId]: amendedCommit
+          },
+          index: { staged: [], deleted: [] }
         };
+
         return {
           newState,
-          output: `[${state.head.type === 'branch' ? state.head.target : 'detached HEAD'} (amended) ${currentCommit}] ${updatedCommit.message}\n Popravljen i izmenjen poslednji commit uspešno!`,
+          output: `[${currentBranch} ${currentCommitId}] (amend) ${finalMsg}\n  Ažuriran poslednji commit i pripremljene izmene.`,
           error: false
         };
       }
 
-      // Provera da li ima šta da se commit-uje (za prve nivoe dozvoljavamo i bez add-a ako je prazan)
-      if (state.index.staged.length === 0 && Object.keys(state.commits).length > 0) {
+      if (state.index.staged.length === 0 && !state.mergeInProgress) {
         return {
           newState: state,
-          output: `Na grani ${state.head.target}\nNema promena dodatih za commit (koristite "git add")`,
+          output: `Nema promena u staging zoni za commit (koristite "git add" pre komande commit).`,
           error: true
         };
       }
 
-      const nextId = generateNextCommitId(state.commits);
-      const currentCommit = getCurrentCommitId(state);
-      
-      const parentIds = currentCommit ? [currentCommit] : [];
+      // If completing a merge conflict
       if (state.mergeInProgress) {
-        parentIds.push(state.mergeInProgress);
+        const mergeBranch = state.mergeInProgress.branch;
+        const mergeCommitId = state.mergeInProgress.commitId;
+        const newCommitId = generateNextCommitId(state.commits);
+        const commitMsg = msg || `Merge grane '${mergeBranch}' u ${currentBranch}`;
+
+        const newCommit: Commit = {
+          id: newCommitId,
+          parentIds: currentCommitId ? [currentCommitId, mergeCommitId] : [mergeCommitId],
+          message: commitMsg,
+          author: 'Luka <luka@kafic-luna.rs>',
+          date: new Date().toLocaleDateString('sr-RS')
+        };
+
+        const updatedCommits = { ...state.commits, [newCommitId]: newCommit };
+        const updatedBranches = { ...state.branches, [currentBranch]: newCommitId };
+
+        const newState: RepoState = {
+          ...state,
+          commits: updatedCommits,
+          branches: updatedBranches,
+          index: { staged: [], deleted: [] },
+          mergeInProgress: undefined
+        };
+
+        return {
+          newState,
+          output: `[${currentBranch} ${newCommitId}] ${commitMsg}\n  Uspešno spajanje završeno (Merge commit sa 2 roditelja).`,
+          error: false
+        };
       }
+
+      if (!msg) {
+        msg = "Ažuriranje Kafić Luna projekta";
+      }
+
+      const newCommitId = generateNextCommitId(state.commits);
+      const parentIds = currentCommitId ? [currentCommitId] : [];
 
       const newCommit: Commit = {
-        id: nextId,
+        id: newCommitId,
         parentIds,
-        message: msg
+        message: msg,
+        author: 'Luka <luka@kafic-luna.rs>',
+        date: new Date().toLocaleDateString('sr-RS')
       };
 
-      const updatedCommits = { ...state.commits, [nextId]: newCommit };
-      const updatedBranches = { ...state.branches };
-
-      let updatedHead = { ...state.head };
-
-      if (state.head.type === 'branch') {
-        updatedBranches[state.head.target] = nextId;
-      } else {
-        updatedHead = { type: 'commit', target: nextId };
-      }
+      const updatedCommits = { ...state.commits, [newCommitId]: newCommit };
+      const updatedBranches = { ...state.branches, [currentBranch]: newCommitId };
 
       const newState: RepoState = {
         ...state,
         commits: updatedCommits,
         branches: updatedBranches,
-        head: updatedHead,
-        index: { staged: [], deleted: [] },
-        workingDirectory: {
-          ...state.workingDirectory,
-          files: Array.from(new Set([...state.workingDirectory.files, ...state.index.staged])),
-          modified: state.workingDirectory.modified.filter(f => !state.index.staged.includes(f)),
-          untracked: []
-        },
-        mergeInProgress: undefined
+        index: { staged: [], deleted: [] }
       };
 
       return {
         newState,
-        output: state.mergeInProgress 
-          ? `Spajanje napravljeno korišćenjem strategije 'recursive'.\n[${state.head.type === 'branch' ? state.head.target : 'detached HEAD'} ${nextId}] ${msg}`
-          : `[${state.head.type === 'branch' ? state.head.target : 'detached HEAD'} ${nextId}] ${msg}\n 1 file changed, 1 insertion(+)`,
+        output: `[${currentBranch} (root-commit) ${newCommitId}] ${msg}\n  ${state.index.staged.length} fajlova sačuvano u istoriju.`,
         error: false
       };
+    }
+
+    case 'log': {
+      const commitList = getCommitList(state.commits);
+      if (commitList.length === 0) {
+        return {
+          newState: state,
+          output: `fatal: trenutna grana nema nijedan commit.`,
+          error: true
+        };
+      }
+
+      const isOneLine = parts.includes('--oneline');
+      const isGraph = parts.includes('--graph');
+      const isAll = parts.includes('--all');
+
+      if (isOneLine || isGraph || isAll) {
+        let out = '';
+        const reversed = [...commitList].reverse();
+        reversed.forEach((c) => {
+          const pointingBranches = Object.keys(state.branches).filter(b => state.branches[b] === c.id);
+          if (state.remoteBranches) {
+            Object.keys(state.remoteBranches).forEach(rb => {
+              if (state.remoteBranches![rb] === c.id) pointingBranches.push(rb);
+            });
+          }
+          if (state.tags) {
+            Object.keys(state.tags).forEach(t => {
+              if (state.tags![t] === c.id) pointingBranches.push(`tag: ${t}`);
+            });
+          }
+
+          const branchPill = pointingBranches.length > 0 ? ` (${pointingBranches.join(', ')})` : '';
+          const graphPrefix = isGraph ? (c.parentIds.length > 1 ? '*   |\\  ' : '* | ') : '';
+          out += `${graphPrefix}${c.id} ${c.message}${branchPill}\n`;
+        });
+        return { newState: state, output: out.trimEnd(), error: false };
+      }
+
+      let out = '';
+      const reversed = [...commitList].reverse();
+      reversed.forEach((c, idx) => {
+        out += `commit ${c.id}7a3f89e21b04c99a8e0f6d\n`;
+        out += `Author: ${c.author || 'Luka <luka@kafic-luna.rs>'}\n`;
+        out += `Date:   ${c.date || 'Danas, 17:00:00'}\n\n`;
+        out += `    ${c.message}\n`;
+        if (idx < reversed.length - 1) out += `\n`;
+      });
+
+      return { newState: state, output: out, error: false };
+    }
+
+    case 'diff': {
+      const rest = parts.slice(2).join(' ');
+      
+      // Branch diff like 'git diff main..kontakt-forma'
+      if (rest.includes('..')) {
+        const [b1, b2] = rest.split('..').map(s => s.trim());
+        return {
+          newState: state,
+          output: `diff --git a/index.html b/index.html
+--- a/index.html (${b1})
++++ b/index.html (${b2})
+@@ -9,4 +9,6 @@
++      <a href="#kontakt">Kontakt</a>
++  <section id="kontakt">
++    <h2>Kontaktirajte Kafić Luna</h2>
++    <p>Adresa: Knez Mihailova 12, Beograd</p>
++  </section>`,
+          error: false
+        };
+      }
+
+      // Diff for untracked files is empty!
+      const staged = state.index.staged;
+      const modified = state.workingDirectory.modified;
+      const untracked = state.workingDirectory.untracked;
+
+      if (untracked.length > 0 && modified.length === 0 && staged.length === 0) {
+        return {
+          newState: state,
+          output: ``, // Intentional empty diff for untracked files as explained in lesson!
+          error: false
+        };
+      }
+
+      if (modified.includes('style.css')) {
+        return {
+          newState: state,
+          output: `diff --git a/style.css b/style.css
+--- a/style.css
++++ b/style.css
+@@ -21,3 +21,3 @@
+-.btn-narucivanje {
+-  background-color: #d4a373;
++.btn-narucivanje {
++  background-color: #e63946; /* eksperimentalna crvena boja */`,
+          error: false
+        };
+      }
+
+      if (modified.length > 0) {
+        return {
+          newState: state,
+          output: modified.map(f => `diff --git a/${f} b/${f}\n--- a/${f}\n+++ b/${f}\n@@ -1,5 +1,6 @@\n+ // Nesačuvane izmene u ${f}`).join('\n\n'),
+          error: false
+        };
+      }
+
+      return { newState: state, output: ``, error: false };
     }
 
     case 'branch': {
-      const uFlagIdx = parts.indexOf('-u') !== -1 ? parts.indexOf('-u') : parts.indexOf('--set-upstream-to');
-      if (uFlagIdx !== -1) {
-        const upstream = parts[uFlagIdx + 1];
-        const localBranch = parts[uFlagIdx + 2] || (state.head.type === 'branch' ? state.head.target : null);
-        if (!upstream) {
-          return { newState: state, output: `error: morate navesti udaljenu granu za povezivanje (npr. origin/master)`, error: true };
-        }
-        if (!localBranch || !state.branches[localBranch]) {
-          return { newState: state, output: `error: lokalna grana ne postoji ili niste na grani.`, error: true };
-        }
+      const vFlag = parts.includes('-v');
+      const bArgs = parts.slice(2).filter(p => !p.startsWith('-'));
+
+      if (bArgs.length === 0) {
+        let out = '';
+        Object.keys(state.branches).forEach(bName => {
+          const isCurrent = state.head.type === 'branch' && state.head.target === bName;
+          const prefix = isCurrent ? '* ' : '  ';
+          const cId = state.branches[bName] || '';
+          const cMsg = cId && state.commits[cId] ? state.commits[cId].message : '';
+          out += `${prefix}${bName}${vFlag ? `\t${cId} ${cMsg}` : ''}\n`;
+        });
+        return { newState: state, output: out.trimEnd(), error: false };
+      }
+
+      const branchName = bArgs[0];
+      const currentCommitId = getCurrentCommitId(state);
+
+      if (state.branches[branchName]) {
         return {
           newState: state,
-          output: `Grana '${localBranch}' je podešena da prati udaljenu granu '${upstream}' sa servera.`,
-          error: false
+          output: `fatal: grana sa imenom '${branchName}' već postoji.`,
+          error: true
         };
       }
 
-      const branchName = parts[2];
-      const deleteFlag = parts.includes('-d') || parts.includes('-D');
-
-      if (!branchName) {
-        // Listanje grana
-        const list = Object.keys(state.branches)
-          .map(b => {
-            const isCurrent = state.head.type === 'branch' && state.head.target === b;
-            return `${isCurrent ? '* ' : '  '}${b} -> ${state.branches[b]}`;
-          })
-          .join('\n');
-        return { newState: state, output: list || 'Nema grana.', error: false };
-      }
-
-      if (deleteFlag) {
-        const targetToDelete = parts.find(p => p !== 'git' && p !== 'branch' && p !== '-d' && p !== '-D');
-        if (!targetToDelete || !state.branches[targetToDelete]) {
-          return { newState: state, output: `error: grana '${targetToDelete}' ne postoji.`, error: true };
-        }
-        if (state.head.type === 'branch' && state.head.target === targetToDelete) {
-          return { newState: state, output: `error: ne možete obrisati granu na kojoj se trenutno nalazite.`, error: true };
-        }
-        
-        const updatedBranches = { ...state.branches };
-        delete updatedBranches[targetToDelete];
-        
-        return {
-          newState: { ...state, branches: updatedBranches },
-          output: `Obrisana grana ${targetToDelete} (bila je na ${state.branches[targetToDelete]}).`,
-          error: false
-        };
-      }
-
-      // Kreiranje nove grane
-      if (state.branches[branchName]) {
-        return { newState: state, output: `fatal: grana sa imenom '${branchName}' već postoji.`, error: true };
-      }
-
-      const currentCommit = getCurrentCommitId(state);
-      const newState = {
+      const newState: RepoState = {
         ...state,
         branches: {
           ...state.branches,
-          [branchName]: currentCommit
+          [branchName]: currentCommitId
         }
       };
 
       return {
         newState,
-        output: `Kreirana lokalna grana '${branchName}' na commit-u ${currentCommit || 'početnom'}.`,
+        output: `Kreirana nova grana '${branchName}' na commit-u ${currentCommitId || 'HEAD'}.`,
         error: false
       };
     }
 
-    case 'checkout':
-    case 'switch': {
-      // checkout -b <ime>
-      const isCreateAndSwitch = parts.includes('-b') || (subCmd === 'switch' && parts.includes('-c'));
-      let target = '';
+    case 'switch':
+    case 'checkout': {
+      const isCreateAndSwitch = parts.includes('-c') || parts.includes('-b');
+      const cleanArgs = parts.slice(2).filter(p => !p.startsWith('-'));
+      const targetName = cleanArgs[0];
+
+      if (!targetName) {
+        return {
+          newState: state,
+          output: `fatal: morate navesti ime grane.`,
+          error: true
+        };
+      }
+
+      // Check if restoring a file via 'git checkout -- <file>'
+      if (parts.includes('--') || state.workingDirectory.files.includes(targetName)) {
+        const fileToRestore = parts.includes('--') ? parts[parts.indexOf('--') + 1] : targetName;
+        const updatedModified = state.workingDirectory.modified.filter(f => f !== fileToRestore);
+        const newState: RepoState = {
+          ...state,
+          workingDirectory: { ...state.workingDirectory, modified: updatedModified }
+        };
+        return {
+          newState,
+          output: `Fajl '${fileToRestore}' je vraćen u stanje iz poslednjeg commit-a.`,
+          error: false
+        };
+      }
+
+      const currentCommitId = getCurrentCommitId(state);
+
       if (isCreateAndSwitch) {
-        const flagIdx = parts.indexOf('-b') !== -1 ? parts.indexOf('-b') : parts.indexOf('-c');
-        target = parts[flagIdx + 1];
-        if (!target) {
-          return { newState: state, output: `fatal: ime nove grane nije prosleđeno.`, error: true };
-        }
-
-        if (state.branches[target]) {
-          return { newState: state, output: `fatal: grana sa imenom '${target}' već postoji.`, error: true };
-        }
-
-        const currentCommit = getCurrentCommitId(state);
         const newState: RepoState = {
           ...state,
           branches: {
             ...state.branches,
-            [target]: currentCommit
+            [targetName]: currentCommitId
           },
-          head: {
-            type: 'branch',
-            target: target
-          }
+          head: { type: 'branch', target: targetName }
         };
         return {
           newState,
-          output: `Kreirana i aktivirana nova grana '${target}'.`,
+          output: `Prebačeno na novu granu '${targetName}'.`,
           error: false
         };
       }
 
-      target = parts[2];
-      if (!target) {
-        return { newState: state, output: `fatal: morate navesti granu ili commit ID za prelazak.`, error: true };
-      }
-
-      // Provera da li je to git checkout -- readme.txt (poništavanje promena)
-      if (parts[2] === '--') {
-        const file = parts[3];
-        if (!file) {
-          return { newState: state, output: `fatal: nije naveden fajl za poništavanje promena.`, error: true };
-        }
-        const newState = {
-          ...state,
-          index: {
-            ...state.index,
-            staged: state.index.staged.filter(f => f !== file)
-          },
-          workingDirectory: {
-            ...state.workingDirectory,
-            modified: state.workingDirectory.modified.filter(f => f !== file),
-            untracked: state.workingDirectory.untracked.filter(f => f !== file)
-          }
-        };
-        return {
-          newState,
-          output: `Poništene promene u radnom direktorijumu za '${file}'.`,
-          error: false
-        };
-      }
-
-      // Provera da li je grana
-      if (state.branches[target] !== undefined) {
+      if (state.branches[targetName] !== undefined) {
         const newState: RepoState = {
           ...state,
-          head: { type: 'branch', target: target }
+          head: { type: 'branch', target: targetName }
         };
         return {
           newState,
-          output: `Prebačeno na granu '${target}'`,
+          output: `Prebačeno na granu '${targetName}'.`,
           error: false
         };
       }
 
-      // Provera da li je commit ID
-      if (state.commits[target] !== undefined) {
+      if (state.commits[targetName]) {
         const newState: RepoState = {
           ...state,
-          head: { type: 'commit', target: target }
+          head: { type: 'commit', target: targetName }
         };
         return {
           newState,
-          output: `UPOZORENJE: Nalazite se u stanju 'detached HEAD'. Možete razgledati i raditi testne commit-e.\nPrebačeno na commit '${target}'`,
-          error: false
-        };
-      }
-
-      // Provera da li je remote branch tipa origin/master
-      if (state.remoteBranches && state.remoteBranches[target] !== undefined) {
-        const newState: RepoState = {
-          ...state,
-          head: { type: 'commit', target: state.remoteBranches[target] }
-        };
-        return {
-          newState,
-          output: `Prebačeno na udaljenu granu '${target}' (u detached HEAD stanju).`,
+          output: `U stanju 'detached HEAD' na commit-u ${targetName}.`,
           error: false
         };
       }
 
       return {
         newState: state,
-        output: `error: putanja '${target}' ne odgovara nijednom fajlu ili grani u repozitorijumu.`,
+        output: `error: putanja ili grana '${targetName}' ne postoji.`,
         error: true
       };
     }
@@ -601,674 +855,405 @@ export const executeGitCommand = (
     case 'merge': {
       const targetBranch = parts[2];
       if (!targetBranch) {
-        return { newState: state, output: `fatal: morate proslediti granu za spajanje.`, error: true };
+        return {
+          newState: state,
+          output: `fatal: morate navesti granu za spajanje (merge).`,
+          error: true
+        };
       }
 
-      const targetCommitId = state.branches[targetBranch] || (state.remoteBranches ? state.remoteBranches[targetBranch] : undefined);
+      const currentBranch = state.head.type === 'branch' ? state.head.target : 'main';
+      const targetCommitId = state.branches[targetBranch];
+
       if (!targetCommitId) {
-        return { newState: state, output: `merge: ${targetBranch} - grana ne postoji.`, error: true };
+        return {
+          newState: state,
+          output: `merge: ${targetBranch} - grana nije pronađena.`,
+          error: true
+        };
       }
 
-      const currentCommitId = getCurrentCommitId(state);
-      if (!currentCommitId) {
-        // Ako nema trenutnog commit-a, samo kopiramo targetCommit
-        if (state.head.type === 'branch') {
-          const newState = {
-            ...state,
-            branches: { ...state.branches, [state.head.target]: targetCommitId }
-          };
-          return { newState, output: `Fast-forward spajanje na ${targetBranch}.`, error: false };
-        }
-        return { newState: state, output: `Greška: HEAD ne pokazuje na ispravan commit.`, error: true };
-      }
+      const currentCommitId = state.branches[currentBranch];
 
-      // Da li je targetBranch već uključen (targetCommit je predak od currentCommit)
-      const ancestor = findCommonAncestor(state.commits, currentCommitId, targetCommitId);
-      if (ancestor === targetCommitId) {
-        return { newState: state, output: `Već ažurirano (Already up-to-date).`, error: false };
-      }
-
-      // Da li je fast-forward (currentCommit je predak od targetCommit)
-      if (ancestor === currentCommitId) {
-        // Fast forward! Pomeramo granu na targetCommitId
-        const updatedBranches = { ...state.branches };
-        if (state.head.type === 'branch') {
-          updatedBranches[state.head.target] = targetCommitId;
-        }
-        const newState = {
+      // Fast-forward case
+      if (targetBranch === 'meni-sekcija') {
+        const newState: RepoState = {
           ...state,
-          branches: updatedBranches,
-          head: state.head.type === 'commit' ? { type: 'commit' as const, target: targetCommitId } : state.head
+          branches: {
+            ...state.branches,
+            [currentBranch]: targetCommitId
+          }
         };
         return {
           newState,
-          output: `Ažuriranje ${currentCommitId}..${targetCommitId}\nFast-forward spajanje.`,
+          output: `Ažuriranje ${currentCommitId || 'C1'}..${targetCommitId}\nFast-forward spajanje uspešno!\n index.html | 15 +++++++++++++++\n style.css  | 10 ++++++++++\n 2 fajla izmenjena, 25 linija dodato(+)`,
           error: false
         };
       }
 
-      // Standardno spajanje (3-way merge) -> kreiramo merge commit
-      const nextId = generateNextCommitId(state.commits);
-      const mergeMsg = `Merge branch '${targetBranch}' u ${state.head.type === 'branch' ? state.head.target : 'trenutnu granu'}`;
-      
-      const newCommit: Commit = {
-        id: nextId,
+      // Conflict case for 'kontakt-forma'
+      if (targetBranch === 'kontakt-forma') {
+        const conflictContent = `<<<<<<< HEAD
+      <a href="#meni">Meni</a>
+=======
+      <a href="#kontakt">Kontakt</a>
+>>>>>>> kontakt-forma`;
+
+        const newState: RepoState = {
+          ...state,
+          mergeInProgress: {
+            branch: targetBranch,
+            commitId: targetCommitId,
+            conflictFile: 'index.html'
+          },
+          workingDirectory: {
+            ...state.workingDirectory,
+            modified: Array.from(new Set([...state.workingDirectory.modified, 'index.html']))
+          },
+          fileContents: {
+            ...state.fileContents,
+            'index.html': conflictContent
+          }
+        };
+
+        return {
+          newState,
+          output: `Automatsko spajanje nije uspelo; popravite konflikte i potom commit-ujte rezultat.\nCONFLICT (content): Merge conflict in index.html`,
+          error: false
+        };
+      }
+
+      // Generic merge commit
+      const newCommitId = generateNextCommitId(state.commits);
+      const mergeCommit: Commit = {
+        id: newCommitId,
         parentIds: [currentCommitId, targetCommitId],
-        message: mergeMsg
+        message: `Merge grane '${targetBranch}' u ${currentBranch}`,
+        author: 'Luka <luka@kafic-luna.rs>',
+        date: new Date().toLocaleDateString('sr-RS')
       };
 
-      const updatedCommits = { ...state.commits, [nextId]: newCommit };
-      const updatedBranches = { ...state.branches };
-      if (state.head.type === 'branch') {
-        updatedBranches[state.head.target] = nextId;
-      }
-
-      const newState = {
+      const newState: RepoState = {
         ...state,
-        commits: updatedCommits,
-        branches: updatedBranches,
-        head: state.head.type === 'commit' ? { type: 'commit' as const, target: nextId } : state.head
+        commits: { ...state.commits, [newCommitId]: mergeCommit },
+        branches: { ...state.branches, [currentBranch]: newCommitId }
       };
 
       return {
         newState,
-        output: `Spajanje napravljeno korišćenjem strategije 'recursive'.\n[${state.head.type === 'branch' ? state.head.target : 'HEAD'} ${nextId}] ${mergeMsg}`,
+        output: `Merge grane '${targetBranch}' uspešno izvršen (commit ${newCommitId}).`,
         error: false
       };
     }
 
-    case 'rebase': {
-      // Filtriraj interaktivne flagove iz argumenata
-      const cleanParts = parts.filter(p => p !== '-i' && p !== '--interactive');
-      const targetBranch = cleanParts[2];
-      if (!targetBranch) {
-        return { newState: state, output: `fatal: morate proslediti ciljnu granu za rebase.`, error: true };
-      }
-
-      const targetCommitId = state.branches[targetBranch] || (state.remoteBranches ? state.remoteBranches[targetBranch] : undefined);
-      if (!targetCommitId) {
-        return { newState: state, output: `fatal: grana '${targetBranch}' ne postoji.`, error: true };
-      }
-
-      const currentCommitId = getCurrentCommitId(state);
-      if (!currentCommitId) {
-        return { newState: state, output: `Greška: HEAD ne pokazuje na ispravan commit.`, error: true };
-      }
-
-      const commonAncestor = findCommonAncestor(state.commits, currentCommitId, targetCommitId);
-      if (!commonAncestor) {
-        return { newState: state, output: `Greška: Nema zajedničkog pretka, rebase nemoguć.`, error: true };
-      }
-
-      if (commonAncestor === currentCommitId) {
-        // Current branch je predak, samo radimo fast-forward rebase
-        const updatedBranches = { ...state.branches };
-        if (state.head.type === 'branch') {
-          updatedBranches[state.head.target] = targetCommitId;
-        }
-        const newState = {
-          ...state,
-          branches: updatedBranches,
-          head: state.head.type === 'commit' ? { type: 'commit' as const, target: targetCommitId } : state.head
-        };
+    case 'restore': {
+      const targetFile = parts[2];
+      if (!targetFile) {
         return {
-          newState,
-          output: `Uspešno rebejdovano i ažurirano (Fast-Forward na ${targetBranch}).`,
-          error: false
+          newState: state,
+          output: `fatal: morate navesti fajl za restore.`,
+          error: true
         };
       }
 
-      // Uzimamo niz commit-a od zajedničkog pretka do trenutnog vrha
-      const commitsToCopy = getCommitPath(state.commits, commonAncestor, currentCommitId);
-      if (commitsToCopy.length === 0) {
-        return { newState: state, output: `Već ažurno sa ${targetBranch}.`, error: false };
-      }
-
-      // Kopiramo ih jedan po jedan na vrh targetCommitId
-      let currentParent = targetCommitId;
-      const copiedCommitsMap: { [id: string]: Commit } = { ...state.commits };
-      
-      const idMapping: { [oldId: string]: string } = {};
-
-      commitsToCopy.forEach(oldId => {
-        const oldCommit = state.commits[oldId];
-        const nextId = generateNextCommitId(copiedCommitsMap);
-        
-        // Zamenjujemo roditelja (ako je imao više roditelja, preslikavamo ih)
-        const parentIds = oldCommit.parentIds.map(p => {
-          if (p === commonAncestor) return currentParent;
-          return idMapping[p] || p;
-        });
-
-        // Ako je prvi roditelj zamenjen
-        if (parentIds[0] === oldCommit.parentIds[0]) {
-          parentIds[0] = currentParent;
+      const updatedModified = state.workingDirectory.modified.filter(f => f !== targetFile);
+      const newState: RepoState = {
+        ...state,
+        workingDirectory: {
+          ...state.workingDirectory,
+          modified: updatedModified
         }
-
-        const newCommit: Commit = {
-          id: nextId,
-          parentIds: parentIds.length > 0 ? parentIds : [currentParent],
-          message: `${oldCommit.message} (rebased)`
-        };
-
-        copiedCommitsMap[nextId] = newCommit;
-        idMapping[oldId] = nextId;
-        currentParent = nextId;
-      });
-
-      const finalCommitId = currentParent;
-      const updatedBranches = { ...state.branches };
-      if (state.head.type === 'branch') {
-        updatedBranches[state.head.target] = finalCommitId;
-      }
-
-      const newState = {
-        ...state,
-        commits: copiedCommitsMap,
-        branches: updatedBranches,
-        head: state.head.type === 'commit' ? { type: 'commit' as const, target: finalCommitId } : state.head
       };
 
       return {
         newState,
-        output: `Uspešno primenjeno i rebejdovano ${commitsToCopy.length} commit-a na vrh ${targetBranch}.`,
-        error: false
-      };
-    }
-
-    case 'cherry-pick': {
-      const targetCommitId = parts[2];
-      if (!targetCommitId) {
-        return { newState: state, output: `fatal: morate navesti commit ID za cherry-pick.`, error: true };
-      }
-
-      const targetCommit = state.commits[targetCommitId] || (state.remoteCommits ? state.remoteCommits[targetCommitId] : undefined);
-      if (!targetCommit) {
-        return { newState: state, output: `error: commit '${targetCommitId}' ne postoji.`, error: true };
-      }
-
-      const currentCommitId = getCurrentCommitId(state);
-      const nextId = generateNextCommitId(state.commits);
-
-      const newCommit: Commit = {
-        id: nextId,
-        parentIds: currentCommitId ? [currentCommitId] : [],
-        message: targetCommit.message
-      };
-
-      const updatedCommits = { ...state.commits, [nextId]: newCommit };
-      const updatedBranches = { ...state.branches };
-      if (state.head.type === 'branch') {
-        updatedBranches[state.head.target] = nextId;
-      }
-
-      const newState = {
-        ...state,
-        commits: updatedCommits,
-        branches: updatedBranches,
-        head: state.head.type === 'commit' ? { type: 'commit' as const, target: nextId } : state.head
-      };
-
-      return {
-        newState,
-        output: `[${state.head.type === 'branch' ? state.head.target : 'HEAD'} ${nextId}] Uspešno cherry-pickovan: ${targetCommit.message}`,
+        output: `Fajl '${targetFile}' je vraćen u čisto stanje iz poslednjeg commit-a (odbačene lokalne izmene).`,
         error: false
       };
     }
 
     case 'reset': {
-      // Podržava git reset <commit> ili git reset --hard <commit>
       const isHard = parts.includes('--hard');
-      const commitArg = parts.find(p => p !== 'git' && p !== 'reset' && p !== '--hard');
+      const targetArg = parts.slice(2).filter(p => !p.startsWith('-'))[0] || '';
 
-      if (!commitArg) {
-        // Podrazumevano poništavanje index-a bez pomeranja HEAD
-        const newlyUntracked: string[] = [];
-        const newlyModified: string[] = [];
+      if (targetArg && targetArg !== 'HEAD') {
+        const fileToUnstage = targetArg.replace(/^HEAD\s+/, '').trim();
+        const updatedStaged = state.index.staged.filter(f => f !== fileToUnstage);
+        const updatedModified = Array.from(new Set([...state.workingDirectory.modified, fileToUnstage]));
 
-        state.index.staged.forEach(file => {
-          if (state.workingDirectory.files.includes(file)) {
-            newlyModified.push(file);
-          } else {
-            newlyUntracked.push(file);
-          }
-        });
-
-        const newState = {
+        const newState: RepoState = {
           ...state,
-          index: { staged: [], deleted: [] },
+          index: { ...state.index, staged: updatedStaged },
           workingDirectory: {
             ...state.workingDirectory,
-            modified: Array.from(new Set([...state.workingDirectory.modified, ...newlyModified])),
-            untracked: Array.from(new Set([...state.workingDirectory.untracked, ...newlyUntracked]))
+            modified: updatedModified
           }
         };
-        return { newState, output: `Nepripremljene promene nakon reseta.`, error: false };
-      }
 
-      const targetId = state.branches[commitArg] || commitArg;
-      if (!state.commits[targetId]) {
-        return { newState: state, output: `error: commit '${commitArg}' ne postoji.`, error: true };
-      }
-
-      const updatedBranches = { ...state.branches };
-      if (state.head.type === 'branch') {
-        updatedBranches[state.head.target] = targetId;
-      }
-
-      const newState: RepoState = {
-        ...state,
-        branches: updatedBranches,
-        head: state.head.type === 'commit' ? { type: 'commit', target: targetId } : state.head,
-        index: isHard ? { staged: [], deleted: [] } : state.index,
-        workingDirectory: isHard ? {
-          files: ['readme.txt'],
-          modified: [],
-          untracked: []
-        } : state.workingDirectory
-      };
-
-      return {
-        newState,
-        output: `HEAD je sada na ${targetId} ${state.commits[targetId].message}`,
-        error: false
-      };
-    }
-
-    case 'revert': {
-      const commitArg = parts[2];
-      if (!commitArg) {
-        return { newState: state, output: `error: morate proslediti commit ID za revert.`, error: true };
-      }
-
-      const targetId = state.branches[commitArg] || commitArg;
-      const targetCommit = state.commits[targetId];
-      if (!targetCommit) {
-        return { newState: state, output: `error: commit '${commitArg}' ne postoji.`, error: true };
-      }
-
-      const currentCommitId = getCurrentCommitId(state);
-      const nextId = generateNextCommitId(state.commits);
-      const msg = `Revert "${targetCommit.message}"`;
-
-      const newCommit: Commit = {
-        id: nextId,
-        parentIds: currentCommitId ? [currentCommitId] : [],
-        message: msg
-      };
-
-      const updatedCommits = { ...state.commits, [nextId]: newCommit };
-      const updatedBranches = { ...state.branches };
-      if (state.head.type === 'branch') {
-        updatedBranches[state.head.target] = nextId;
-      }
-
-      const newState = {
-        ...state,
-        commits: updatedCommits,
-        branches: updatedBranches,
-        head: state.head.type === 'commit' ? { type: 'commit' as const, target: nextId } : state.head
-      };
-
-      return {
-        newState,
-        output: `[${state.head.type === 'branch' ? state.head.target : 'HEAD'} ${nextId}] ${msg}\n 1 file changed, 1 deletion(-)`,
-        error: false
-      };
-    }
-
-    case 'clone': {
-      const url = parts[2];
-      if (!url) {
-        return { newState: state, output: `fatal: morate proslediti URL repozitorijuma za kloniranje.`, error: true };
-      }
-
-      // Kloniranje generiše simulirano stanje sa remote serverom
-      const remoteCommits: { [id: string]: Commit } = {
-        C0: { id: 'C0', parentIds: [], message: 'Inicijalni commit na serveru', isRemote: true },
-        C1: { id: 'C1', parentIds: ['C0'], message: 'Dodata osnovna dokumentacija', isRemote: true }
-      };
-
-      const newState: RepoState = {
-        commits: {
-          C0: { id: 'C0', parentIds: [], message: 'Inicijalni commit na serveru' },
-          C1: { id: 'C1', parentIds: ['C0'], message: 'Dodata osnovna dokumentacija' }
-        },
-        branches: {
-          master: 'C1'
-        },
-        head: { type: 'branch', target: 'master' },
-        index: { staged: [], deleted: [] },
-        workingDirectory: {
-          files: ['readme.txt'],
-          modified: [],
-          untracked: []
-        },
-        remoteCommits,
-        remoteBranches: {
-          'origin/master': 'C1'
-        },
-        hasRemote: true
-      };
-
-      return {
-        newState,
-        output: `Kloniranje u 'projekat'...\nremote: Brojanje objekata: 6, gotovo.\nremote: Kompresovanje objekata: 100% (4/4), gotovo.\nPrimanje objekata: 100% (6/6), gotovo.`,
-        error: false
-      };
-    }
-
-    case 'fetch': {
-      if (!state.hasRemote) {
-        return { newState: state, output: `fatal: nema podešenog udaljenog repozitorijuma.`, error: true };
-      }
-
-      // Fetch preuzima remoteCommits i postavlja ih u local commits, i ažurira origin/master
-      const updatedCommits = { ...state.commits };
-      if (state.remoteCommits) {
-        Object.keys(state.remoteCommits).forEach(id => {
-          if (!updatedCommits[id]) {
-            updatedCommits[id] = { ...state.remoteCommits![id], isRemote: false };
-          }
-        });
-      }
-
-      const newState: RepoState = {
-        ...state,
-        commits: updatedCommits,
-        remoteBranches: {
-          ...state.remoteBranches,
-          'origin/master': state.remoteBranches ? state.remoteBranches['origin/master'] : ''
-        }
-      };
-
-      return {
-        newState,
-        output: `Sa servera:\n * [nova grana]      master     -> origin/master`,
-        error: false
-      };
-    }
-
-    case 'push': {
-      if (!state.hasRemote) {
-        return { newState: state, output: `fatal: nema podešenog udaljenog repozitorijuma.`, error: true };
-      }
-
-      const currentCommitId = getCurrentCommitId(state);
-      const remoteMasterId = state.remoteBranches ? state.remoteBranches['origin/master'] : '';
-
-      if (currentCommitId === remoteMasterId) {
-        return { newState: state, output: `Sve je već poslato (Everything up-to-date).`, error: false };
-      }
-
-      // Provera da li možemo da uradimo push (da li je local commit potomak remote commit-a)
-      const ancestor = findCommonAncestor(state.commits, currentCommitId, remoteMasterId || '');
-      if (ancestor !== remoteMasterId) {
         return {
-          newState: state,
-          output: `error: neuspešno slanje nekih referenci na server.\nSavet: Uradite prvo 'git pull' da biste integrisali udaljene promene pre slanja.`,
-          error: true
+          newState,
+          output: `Nepripremljene izmene nakon resetovanja (Unstaged):\nM\t${fileToUnstage}`,
+          error: false
         };
       }
 
-      // Ažuriramo server
-      const updatedRemoteCommits = { ...state.remoteCommits };
-      const updatedRemoteBranches = { ...state.remoteBranches };
-
-      // Kopiramo sve lokalne commit-e na server
-      Object.keys(state.commits).forEach(id => {
-        updatedRemoteCommits[id] = { ...state.commits[id], isRemote: true };
-      });
-
-      if (state.head.type === 'branch' && state.head.target === 'master') {
-        updatedRemoteBranches['origin/master'] = currentCommitId;
-      }
-
-      const newState: RepoState = {
-        ...state,
-        remoteCommits: updatedRemoteCommits,
-        remoteBranches: updatedRemoteBranches
-      };
-
-      return {
-        newState,
-        output: `Brojanje objekata: 3, gotovo.\nDelta kompresija uz korišćenje do 8 niti.\nSlanje objekata: 100% (3/3), gotovo.\nTo origin\n   ${remoteMasterId?.substring(0, 7)}..${currentCommitId?.substring(0, 7)}  master -> master`,
-        error: false
-      };
-    }
-
-    case 'pull': {
-      if (!state.hasRemote) {
-        return { newState: state, output: `fatal: nema podešenog udaljenog repozitorijuma.`, error: true };
-      }
-
-      // 1. Fetch
-      const fetchResult = executeGitCommand(state, 'git fetch');
-      let newState = fetchResult.newState;
-      
-      // 2. Merge origin/master
-      const remoteMasterId = newState.remoteBranches ? newState.remoteBranches['origin/master'] : '';
-      if (!remoteMasterId) {
-        return { newState, output: fetchResult.output + `\nGreška: origin/master ne postoji.`, error: true };
-      }
-
-      const mergeResult = executeGitCommand(newState, `git merge origin/master`);
-      return {
-        newState: mergeResult.newState,
-        output: fetchResult.output + '\n' + mergeResult.output,
-        error: mergeResult.error
-      };
-    }
-
-    case 'stash': {
-      const option = parts[2]; // git stash <pop/list/clear>
-      if (!option) {
-        // Običan git stash: sklanja staged i modified fajlove
-        const modifiedFiles = [...state.workingDirectory.modified];
-        const stagedFiles = [...state.index.staged];
-        
-        if (modifiedFiles.length === 0 && stagedFiles.length === 0) {
-          return {
-            newState: state,
-            output: `Nema lokalnih promena za sklanjanje. Radno stablo je čisto.`,
-            error: false
-          };
-        }
-
-        const newStashItem = {
-          staged: stagedFiles,
-          modified: modifiedFiles,
-          untracked: []
-        };
-
-        const updatedStash = state.stash ? [...state.stash, newStashItem] : [newStashItem];
-
+      if (isHard) {
+        const currentCommitId = getCurrentCommitId(state);
         const newState: RepoState = {
           ...state,
           index: { staged: [], deleted: [] },
           workingDirectory: {
             ...state.workingDirectory,
             modified: [],
-          },
-          stash: updatedStash
+            untracked: []
+          }
         };
-
         return {
           newState,
-          output: `Saved working directory and index state WIP on ${state.head.target}: korak stash-a sačuvan.\nRadno stablo je sada čisto!`,
+          output: `HEAD je sada na ${currentCommitId} (tvrdi reset radnog stabla).`,
           error: false
         };
-      } else if (option === 'pop') {
+      }
+
+      // Unstage all
+      const unstagedFiles = [...state.index.staged];
+      const newState: RepoState = {
+        ...state,
+        index: { staged: [], deleted: [] },
+        workingDirectory: {
+          ...state.workingDirectory,
+          modified: Array.from(new Set([...state.workingDirectory.modified, ...unstagedFiles]))
+        }
+      };
+
+      return {
+        newState,
+        output: `Uklonjene pripremljene izmene iz staging zone (Unstaged all).`,
+        error: false
+      };
+    }
+
+    case 'revert': {
+      const targetCommitArg = parts[2] || 'HEAD';
+      const currentBranch = state.head.type === 'branch' ? state.head.target : 'main';
+      const currentCommitId = state.branches[currentBranch];
+
+      const commitToRevertId = targetCommitArg === 'HEAD' ? currentCommitId : targetCommitArg;
+      const targetCommit = state.commits[commitToRevertId];
+
+      if (!targetCommit) {
+        return {
+          newState: state,
+          output: `fatal: commit '${targetCommitArg}' nije pronađen za revert.`,
+          error: true
+        };
+      }
+
+      const newCommitId = generateNextCommitId(state.commits);
+      const revertCommit: Commit = {
+        id: newCommitId,
+        parentIds: currentCommitId ? [currentCommitId] : [],
+        message: `Revert "${targetCommit.message}"`,
+        author: 'Luka <luka@kafic-luna.rs>',
+        date: new Date().toLocaleDateString('sr-RS')
+      };
+
+      const newState: RepoState = {
+        ...state,
+        commits: { ...state.commits, [newCommitId]: revertCommit },
+        branches: { ...state.branches, [currentBranch]: newCommitId }
+      };
+
+      return {
+        newState,
+        output: `[${currentBranch} ${newCommitId}] Revert "${targetCommit.message}"\n 1 fajl promenjen, ispravljen meni link.`,
+        error: false
+      };
+    }
+
+    case 'stash': {
+      const subAction = parts[2];
+      if (subAction === 'pop') {
         if (!state.stash || state.stash.length === 0) {
           return {
             newState: state,
-            output: `fatal: nema sačuvanih stash-eva za vraćanje.`,
+            output: `Nema sačuvanih izmena na stash steku (stash je prazan).`,
             error: true
           };
         }
 
-        const updatedStash = [...state.stash];
-        const poppedItem = updatedStash.pop()!;
+        const popped = state.stash[0];
+        const remainingStash = state.stash.slice(1);
 
         const newState: RepoState = {
           ...state,
+          stash: remainingStash,
           index: {
             ...state.index,
-            staged: Array.from(new Set([...state.index.staged, ...poppedItem.staged]))
+            staged: Array.from(new Set([...state.index.staged, ...popped.staged]))
           },
           workingDirectory: {
             ...state.workingDirectory,
-            modified: Array.from(new Set([...state.workingDirectory.modified, ...poppedItem.modified]))
-          },
-          stash: updatedStash
+            modified: Array.from(new Set([...state.workingDirectory.modified, ...popped.modified])),
+            untracked: Array.from(new Set([...state.workingDirectory.untracked, ...popped.untracked]))
+          }
         };
 
         return {
           newState,
-          output: `Preuzete i primenjene promene iz stash-a na radno stablo!\nUklonjena stavka stash-a.`,
+          output: `Na grani ${state.head.target}\nIzmene vraćene sa stash steka:\n${popped.modified.map(f => `  izmenjeno: ${f}`).join('\n')}`,
           error: false
-        };
-      } else if (option === 'list') {
-        const listOutput = state.stash && state.stash.length > 0
-          ? state.stash.map((_, idx) => `stash@{${idx}}: WIP on ${state.head.target}: sačuvano stanje`).join('\n')
-          : `Nema sačuvanih stash stavki.`;
-        return {
-          newState: state,
-          output: listOutput,
-          error: false
-        };
-      } else {
-        return {
-          newState: state,
-          output: `Opcija '${option}' za git stash nije podržana. Koristite 'git stash' ili 'git stash pop'.`,
-          error: true
         };
       }
+
+      // Default 'git stash'
+      const modifiedToStash = [...state.workingDirectory.modified];
+      const stagedToStash = [...state.index.staged];
+      const untrackedToStash = [...state.workingDirectory.untracked];
+
+      if (modifiedToStash.length === 0 && stagedToStash.length === 0) {
+        return {
+          newState: state,
+          output: `Nema lokalnih izmena za čuvanje (radni direktorijum je čist).`,
+          error: false
+        };
+      }
+
+      const newStashEntry = {
+        staged: stagedToStash,
+        modified: modifiedToStash,
+        untracked: untrackedToStash
+      };
+
+      const currentStashList = state.stash || [];
+
+      const newState: RepoState = {
+        ...state,
+        stash: [newStashEntry, ...currentStashList],
+        index: { staged: [], deleted: [] },
+        workingDirectory: {
+          ...state.workingDirectory,
+          modified: [],
+          untracked: []
+        }
+      };
+
+      return {
+        newState,
+        output: `Sačuvano radno stablo i stanje index-a u WIP stash@{0}: Rad na skripti menija`,
+        error: false
+      };
     }
 
     case 'tag': {
       const tagName = parts[2];
       if (!tagName) {
-        const allTags = state.tags ? Object.keys(state.tags).join('\n') : '';
-        return {
-          newState: state,
-          output: allTags || `Nema kreiranih tagova.`,
-          error: false
-        };
+        let out = '';
+        if (state.tags) {
+          Object.keys(state.tags).forEach(t => {
+            out += `${t}\n`;
+          });
+        }
+        return { newState: state, output: out.trimEnd() || 'Nema kreiranih tagova.', error: false };
       }
 
-      const currentCommit = getCurrentCommitId(state);
-      if (!currentCommit) {
+      const currentCommitId = getCurrentCommitId(state);
+      if (!currentCommitId) {
         return {
           newState: state,
-          output: `fatal: nema commit-a na koji se može staviti tag.`,
+          output: `fatal: ne možete kreirati tag bez postojećeg commit-a.`,
           error: true
         };
       }
 
-      const updatedTags = { ...state.tags, [tagName]: currentCommit };
       const newState: RepoState = {
         ...state,
-        tags: updatedTags
+        tags: {
+          ...(state.tags || {}),
+          [tagName]: currentCommitId
+        }
       };
 
       return {
         newState,
-        output: `Kreiran tag '${tagName}' na commit-u ${currentCommit} uspešno!`,
+        output: `Kreiran tag '${tagName}' na commit-u ${currentCommitId}.`,
         error: false
       };
     }
 
-    case 'diff': {
-      const isStaged = parts.includes('--staged') || parts.includes('--cached');
-      if (isStaged) {
-        if (state.index.staged.length === 0) {
-          return {
-            newState: state,
-            output: `Nema pripremljenih promena za prikaz (staging area je prazna).`,
-            error: false
-          };
-        }
+    case 'push': {
+      const remote = parts[2] || 'origin';
+      const branch = parts[3] || (state.head.type === 'branch' ? state.head.target : 'main');
+
+      const currentCommitId = state.branches[branch] || getCurrentCommitId(state);
+      if (!currentCommitId) {
         return {
           newState: state,
-          output: state.index.staged.map(f => `diff --git a/${f} b/${f}\n--- a/${f}\n+++ b/${f}\n@@ -1 +1 @@\n+ Nova pripremljena linija u ${f}`).join('\n\n'),
-          error: false
-        };
-      } else {
-        if (state.workingDirectory.modified.length === 0) {
-          return {
-            newState: state,
-            output: `Nema nepripremljenih modifikacija u radnom direktorijumu.`,
-            error: false
-          };
-        }
-        return {
-          newState: state,
-          output: state.workingDirectory.modified.map(f => `diff --git a/${f} b/${f}\n--- a/${f}\n+++ b/${f}\n@@ -1,1 +1,2 @@\n- Stara verzija fajla ${f}\n+ Nova nepripremljena izmena u ${f}`).join('\n\n'),
-          error: false
+          output: `fatal: nema commit-a za slanje na server.`,
+          error: true
         };
       }
-    }
 
-    case 'reflog': {
-      const currentCommit = getCurrentCommitId(state) || 'C1';
+      const remoteBranches = {
+        ...(state.remoteBranches || {}),
+        [`${remote}/${branch}`]: currentCommitId
+      };
+
+      const newState: RepoState = {
+        ...state,
+        hasRemote: true,
+        remoteBranches
+      };
+
       return {
-        newState: state,
-        output: `${currentCommit} HEAD@{0}: checkout: moving from develop to master
-${currentCommit} HEAD@{1}: commit: Dodat novi feature
-C1 HEAD@{2}: commit: Inicijalni commit sa predavanja
-C0 HEAD@{3}: clone: from https://github.com/igord/git-kurs.git`,
+        newState,
+        output: `Objekti uspešno poslati na ${remote}/${branch} (${currentCommitId} -> ${currentCommitId})\nGrana '${branch}' je sinhronizovana sa '${remote}/${branch}'.`,
         error: false
       };
     }
 
-    case 'bisect': {
-      const sub = parts[2];
-      if (!sub) {
-        return {
-          newState: state,
-          output: `Korišćenje: git bisect [start|bad|good|reset]`,
-          error: true
-        };
-      }
-      if (sub === 'start') {
-        return {
-          newState: state,
-          output: `status: bisecting: 3 commits preostalo za testiranje nakon ovoga (otprilike 2 koraka)\n[C2] Rad na feature grani`,
-          error: false
-        };
-      } else if (sub === 'bad') {
-        return {
-          newState: state,
-          output: `status: bisecting: 1 commit preostalo za testiranje nakon ovoga (otprilike 1 korak)\n[C1] Prvi commit (potencijalno loš)`,
-          error: false
-        };
-      } else if (sub === 'good') {
-        return {
-          newState: state,
-          output: `C1 je prvi loš commit (first bad commit)\ncommit C1\nAuthor: Luka <luka@example.com>\nDate: Sun May 24 15:22:50 2026\n\n    Uvedena greška u kodu`,
-          error: false
-        };
-      } else if (sub === 'reset') {
-        return {
-          newState: state,
-          output: `Završen bisect. Vraćen na originalni HEAD.`,
-          error: false
-        };
-      } else {
-        return {
-          newState: state,
-          output: `error: nepoznata bisect opcija '${sub}'`,
-          error: true
-        };
-      }
+    case 'pull': {
+      const remote = parts[2] || 'origin';
+      const branch = parts[3] || (state.head.type === 'branch' ? state.head.target : 'main');
+
+      // Check current commit
+      const currentCommitId = state.branches[branch] || '';
+
+      // Create new commit representing pulled changes
+      const newCommitId = generateNextCommitId(state.commits);
+      const pulledCommit: Commit = {
+        id: newCommitId,
+        parentIds: currentCommitId ? [currentCommitId] : [],
+        message: 'Dodaj "O nama" sekciju na Kafić Luna sajt (od saradnika)',
+        author: 'Iva <iva@kafic-luna.rs>',
+        date: new Date().toLocaleDateString('sr-RS')
+      };
+
+      const updatedCommits = { ...state.commits, [newCommitId]: pulledCommit };
+      const updatedBranches = { ...state.branches, [branch]: newCommitId };
+      const updatedRemoteBranches = { ...(state.remoteBranches || {}), [`${remote}/${branch}`]: newCommitId };
+
+      const newState: RepoState = {
+        ...state,
+        hasRemote: true,
+        commits: updatedCommits,
+        branches: updatedBranches,
+        remoteBranches: updatedRemoteBranches
+      };
+
+      return {
+        newState,
+        output: `Ažuriranje ${currentCommitId || 'C1'}..${newCommitId}\nFast-forward spajanje sa ${remote}/${branch}\n index.html | 8 ++++++++\n 1 fajl izmenjen, 8 linija dodato(+)`,
+        error: false
+      };
     }
 
-    default:
+    default: {
       return {
         newState: state,
-        output: `Nepoznata komanda 'git ${subCmd}'. Ukucajte 'git help' za listu podržanih komandi.`,
+        output: `git: '${subCmd}' nije git komanda. Pogledajte 'git help'.`,
         error: true
       };
+    }
   }
 };
