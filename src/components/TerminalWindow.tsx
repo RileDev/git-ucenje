@@ -14,6 +14,7 @@ interface Props {
   onResetLevel: () => void;
   soundEnabled: boolean;
   setGitkoMsg: (msg: string) => void;
+  userName?: string;
 }
 
 export const TerminalWindow: React.FC<Props> = ({
@@ -27,8 +28,17 @@ export const TerminalWindow: React.FC<Props> = ({
   onResetLevel,
   soundEnabled,
   setGitkoMsg,
+  userName = 'Luka',
 }) => {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const promptUser = userName
+    .toLowerCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'dj')
+    .replace(/[^a-z0-9_]/g, '_')
+    .replace(/^_+|_+$/g, '') || 'luka';
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -105,7 +115,7 @@ export const TerminalWindow: React.FC<Props> = ({
             <div key={i}>
               {h.input && (
                 <div className="xp-terminal-input-row">
-                  <span className="xp-terminal-prompt">luka@luna-xp:~$</span>
+                  <span className="xp-terminal-prompt">{promptUser}@kafic-luna:~$</span>
                   <span>{h.input}</span>
                 </div>
               )}
@@ -123,7 +133,7 @@ export const TerminalWindow: React.FC<Props> = ({
           <div ref={bottomRef} />
         </div>
         <form onSubmit={onSubmit} className="xp-terminal-input-row">
-          <span className="xp-terminal-prompt">luka@luna-xp:~$</span>
+          <span className="xp-terminal-prompt">{promptUser}@kafic-luna:~$</span>
           <input
             id="term-input-field"
             type="text"

@@ -531,12 +531,12 @@ Kreni na sledeću lekciju.`,
     title: "Lekcija 1: git branch i git switch -c",
     category: "Nivo 2: Srednji nivo",
     story: "Želiš da dodaš novu sekciju 'Meni' na sajt, ali ne želiš da nedovršen rad ide direktno na main, koji je trenutno živ i stabilan.",
-    whyItMatters: "Ovo je navika profesionalaca za svaku novu funkcionalnost: nova grana = izolovan prostor za rad bez rizika.",
-    task: "Napravi novu granu za rad na sekciji menija, i odmah se prebaci na nju — u jednom potezu.",
-    hint1: "git branch pravi granu, a git switch prebacuje. Koja opcija ih kombinuje u jednu komandu?",
-    hint2: "git switch -c meni-sekcija",
+    whyItMatters: "Ovo je navika profesionalaca za svaku novu funkcionalnost: nova grana = izolovan prostor za rad bez rizika. Flag '-c' dolazi od engleske reči 'create' (kreiraj) — omogućava ti da u jednom potezu napraviš granu i odmah pređeš na nju umesto kucanja dve odvojene komande (git branch pa git switch).",
+    task: "Napravi novu granu za rad na sekciji menija (nazovi je **meni-sekcija**), i prebaci se na nju.",
+    hint1: "Možeš prvo kreirati granu pa se prebaciti, ili iskoristiti flag -c (create) koji to radi u jednom potezu.",
+    hint2: "1. U dva koraka:\ngit branch meni-sekcija\ngit switch meni-sekcija\n\n2. U jednom potezu (-c = create):\ngit switch -c meni-sekcija",
     expectedResult: "Vizuelni Git Graf prikazuje novu granu meni-sekcija. Terminal prompt pokazuje da si na meni-sekcija.",
-    quickOverview: "git switch -c <ime> — pravi novu granu i odmah se prebacuje na nju.",
+    quickOverview: "git switch -c <ime> — kreira (-c = create) novu granu i odmah se prebacuje na nju.",
     description: `### Priča
 Želiš da dodaš novu sekciju "Meni" na sajt, ali ne želiš da nedovršen rad ide direktno na \`main\`, koji je trenutno živ i stabilan.
 
@@ -565,7 +565,7 @@ Nova grana = izolovan prostor za rad, bez rizika da pokvariš ono što već radi
         state.head.target === 'meni-sekcija'
       );
     },
-    expectedCommands: ["git switch", "git branch", "git checkout"],
+    expectedCommands: [],
     livePreview: { hasAbout: true, hasMenu: false, hasContact: false }
   },
   {
@@ -576,8 +576,8 @@ Nova grana = izolovan prostor za rad, bez rizika da pokvariš ono što već radi
     category: "Nivo 2: Srednji nivo",
     story: "Na grani meni-sekcija si dodao/la meni i commit-ovao/la. Sad je sekcija spremna i želiš je vratiti u main.",
     whyItMatters: "Grananje bez spajanja je beskorisno — svaki uspešan rad se vraća u glavnu liniju. Pošto se main nije menjao, ovo je fast-forward merge.",
-    task: "Vrati se na main granu (git switch main), pa spoji svoj završeni rad sa grane meni-sekcija u nju.",
-    hint1: "Koja komanda spaja navedenu granu u granu na kojoj se trenutno nalaziš?",
+    task: "Vrati se na main granu, pa spoji svoj završeni rad sa grane meni-sekcija u nju.",
+    hint1: "Koja komanda spaja navedenu granu u granu na kojoj se trenutno nalaziš? (ukucaj 'git help' da prelistaš sve komande)",
     hint2: "git switch main pa git merge meni-sekcija",
     expectedResult: "index.html i Live Browser na main grani sada sadrže Meni sekciju! Git Graf pokazuje da su main i meni-sekcija na istoj tački.",
     quickOverview: "git merge <grana> — spaja navedenu granu u trenutnu granu.",
@@ -594,7 +594,7 @@ Pošto se \`main\` nije menjao dok si ti radio/la, ovo će biti najjednostavniji
         C3: { id: 'C3', parentIds: ['C2'], message: 'Dodaj Meni sekciju i cenovnik kafe', author: 'Luka' }
       },
       branches: { main: 'C2', 'meni-sekcija': 'C3' },
-      head: { type: 'branch', target: 'main' },
+      head: { type: 'branch', target: 'meni-sekcija' },
       index: { staged: [], deleted: [] },
       workingDirectory: {
         files: ['index.html', 'style.css', 'script.js', '.gitignore'],
@@ -742,7 +742,7 @@ Radi samo sa izmenama koje još nisi ni dodao (\`add\`) niti commit-ovao. Ideala
     validate: (state: RepoState) => {
       return !state.workingDirectory.modified.includes('style.css');
     },
-    expectedCommands: ["git restore", "git checkout"],
+    expectedCommands: [],
     livePreview: { hasAbout: true, hasMenu: true, hasContact: true, isStyleBroken: true }
   },
   {
@@ -1042,3 +1042,221 @@ Dobrodošli u završni nivo kursa! U ovom nivou prelazimo sa simuliranog lokalno
     livePreview: { hasAbout: true, hasMenu: true, hasContact: true, hasFavicon: true, tag: 'v1.0' }
   }
 ];
+
+// Pametni asistent: ako student unese tačnu komandu ali sa pogrešnim imenom/argumentom ili redosledom,
+// Gitko ga pohvali i prijateljski uputi na tačan naziv koji se traži u zadatku.
+export const getGitkoSmartAdvice = (
+  level: Level,
+  cmd: string,
+  _prevState: RepoState,
+  newState: RepoState
+): string | null => {
+  const cleanCmd = cmd.trim();
+  const parts = cleanCmd.split(/\s+/);
+  const gitCmd = parts[0]?.toLowerCase();
+  const subCmd = parts[1]?.toLowerCase();
+  const arg1 = parts[2];
+  const arg2 = parts[3];
+
+  if (gitCmd !== 'git') return null;
+
+  // Nivo 1 Lekcija 1 (git init)
+  if (level.id === 2) {
+    if (subCmd !== 'init') {
+      return `Dobar instinkt! 👏 Ali pre bilo koje druge Git radnje, moramo prvo inicijalizovati repozitorijum. Pokreni: git init`;
+    }
+  }
+
+  // Nivo 1 Lekcija 2 (git status)
+  if (level.id === 3) {
+    if (subCmd !== 'status') {
+      return `Super komanda! 👏 Ali pre dodavanja ili čuvanja, hajde prvo da proverimo stanje projekta komandom: git status`;
+    }
+  }
+
+  // Nivo 1 Lekcija 3 (.gitignore)
+  if (level.id === 4 || level.id === 5) {
+    if (subCmd === 'add' || subCmd === 'commit') {
+      if (newState.workingDirectory.untracked.includes('secrets.txt')) {
+        return `Pazi na tajne podatke! ⚠️ Pre nego što dodaš fajlove, prvo u File Exploreru otvori .gitignore, klikni 'Uredi', dopiši 'secrets.txt' i klikni 'Sačuvaj'.`;
+      }
+    }
+    if (subCmd === 'status') {
+      if (newState.workingDirectory.untracked.includes('secrets.txt')) {
+        return `Još uvek vidimo secrets.txt pod Untracked files! 💡 Otvori .gitignore u File Exploreru, klikni 'Uredi', dopiši 'secrets.txt', klikni 'Sačuvaj', pa ponovo pokreni: git status`;
+      }
+    }
+  }
+
+  // Nivo 1 Lekcija 5 (git add .)
+  if (level.id === 6) {
+    if (subCmd === 'add') {
+      if (arg1 && arg1 !== '.' && newState.index.staged.length < 3) {
+        return `Super, dodao/la si ${arg1}! 👏 Za ovu lekciju želimo da pripremimo sve fajlove odjednom u jednom koraku. Pokreni: git add .`;
+      }
+    }
+    if (subCmd === 'commit') {
+      if (newState.index.staged.length === 0) {
+        return `Staging zona je još prazna! 💡 Prvo pripremi fajlove komandom: git add .`;
+      }
+    }
+  }
+
+  // Nivo 1 Lekcija 6 (git commit -m "...")
+  if (level.id === 7) {
+    if (subCmd === 'commit') {
+      if (!parts.includes('-m')) {
+        return `Bravo za git commit! 👏 Ne zaboravi da dodaš opisnu poruku uz opciju -m. Pokreni npr: git commit -m "Dodaj početnu strukturu Kafić Luna sajta"`;
+      }
+    }
+  }
+
+  // Nivo 1 Lekcija 8 (git push origin main)
+  if (level.id === 9) {
+    if (subCmd === 'push') {
+      if (arg1 === 'origin' && arg2 && arg2 !== 'main') {
+        return `Bravo za korišćenje git push! 👏 Za ovu lekciju šaljemo na granu 'main'. Pokreni: git push origin main`;
+      }
+      if (arg1 && arg1 !== 'origin') {
+        return `Bravo za git push! 👏 Udaljeni repozitorijum se zove 'origin', a grana 'main'. Pokreni: git push origin main`;
+      }
+    }
+  }
+
+  // Nivo 1 Lekcija 9 (git pull origin main)
+  if (level.id === 10) {
+    if (subCmd === 'pull') {
+      if (arg1 === 'origin' && arg2 && arg2 !== 'main') {
+        return `Bravo za korišćenje git pull! 👏 Za ovu lekciju preuzimamo sa grane 'main'. Pokreni: git pull origin main`;
+      }
+      if (arg1 && arg1 !== 'origin') {
+        return `Bravo za git pull! 👏 Preuzimamo sa udaljenog repozitorijuma 'origin' i grane 'main'. Pokreni: git pull origin main`;
+      }
+    }
+  }
+
+  // Nivo 2 Lekcija 1 (Grananje): traži se 'meni-sekcija'
+  if (level.id === 12) {
+    if (subCmd === 'switch' || subCmd === 'checkout' || subCmd === 'branch') {
+      const cIdx = parts.indexOf('-c');
+      const bIdx = parts.indexOf('-b');
+      const targetBranch = cIdx !== -1 ? parts[cIdx + 1]
+        : bIdx !== -1 ? parts[bIdx + 1]
+          : (subCmd === 'branch' && arg1 && !arg1.startsWith('-')) ? arg1
+            : (subCmd === 'switch' && arg1 && !arg1.startsWith('-')) ? arg1
+              : null;
+
+      if (targetBranch && targetBranch !== 'meni-sekcija' && targetBranch !== 'main') {
+        return `Bravo za tačnu komandu! 👏 Kreirao/la si granu '${targetBranch}', ali za potrebe ove lekcije potrebno je da se zove tačno 'meni-sekcija'. Pokreni: git switch -c meni-sekcija`;
+      }
+
+      if (newState.branches['meni-sekcija'] && newState.head.target !== 'meni-sekcija') {
+        return `Odlično, kreirao/la si granu 'meni-sekcija'! 👏 Sada se još samo prebaci na nju komandom: git switch meni-sekcija`;
+      }
+    }
+  }
+
+  // Nivo 2 Lekcija 2 (Merge): traži se spajanje 'meni-sekcija' u 'main'
+  if (level.id === 13) {
+    if (subCmd === 'merge') {
+      if (newState.head.target !== 'main') {
+        return `Pazi na granu! 💡 Pre spajanja moraš biti na 'main' grani. Pokreni prvo: git switch main pa onda: git merge meni-sekcija`;
+      }
+      if (arg1 && arg1 !== 'meni-sekcija') {
+        return `Tačna je komanda git merge! 👏 Za ovu lekciju spajamo granu 'meni-sekcija'. Pokreni: git merge meni-sekcija`;
+      }
+    }
+    if (subCmd === 'switch' && arg1 === 'main') {
+      return `Super, sad si na main grani! 👏 Sada unesi komandu za spajanje: git merge meni-sekcija`;
+    }
+  }
+
+  // Nivo 2 Lekcija 3 (Merge konflikt): traži se spajanje 'kontakt-forma'
+  if (level.id === 14) {
+    if (subCmd === 'merge') {
+      if (arg1 && arg1 !== 'kontakt-forma') {
+        return `Tačna je komanda! 👏 Za ovu lekciju spajamo granu 'kontakt-forma' u main kako bismo demonstrirali konflikt. Pokreni: git merge kontakt-forma`;
+      }
+    }
+    if (newState.mergeInProgress && !newState.index.staged.includes('index.html')) {
+      if (subCmd === 'commit') {
+        return `Fajl sa konfliktom još nije dodat u staging! 💡 Nakon rešavanja konflikta u index.html, pokreni: git add index.html pa onda: git commit`;
+      }
+    }
+  }
+
+  // Nivo 2 Lekcija 4 (git log --oneline --graph --all)
+  if (level.id === 15) {
+    if (subCmd === 'log') {
+      const hasGraph = parts.includes('--graph');
+      const hasAll = parts.includes('--all');
+      const hasOneLine = parts.includes('--oneline');
+      if (!hasGraph || !hasAll || !hasOneLine) {
+        return `Dobar početak sa git log! 👏 Da bi dobio puni sažeti grafički prikaz svih grana, dodaj opcije: git log --oneline --graph --all`;
+      }
+    }
+  }
+
+  // Nivo 2 Lekcija 5 (git restore): traži se 'style.css'
+  if (level.id === 16) {
+    if ((subCmd === 'restore' || subCmd === 'checkout') && arg1 && arg1 !== 'style.css') {
+      return `Dobra komanda! 👏 U ovoj lekciji želimo da poništimo eksperimentalnu izmenu u 'style.css'. Pokreni: git restore style.css`;
+    }
+  }
+
+  // Nivo 2 Lekcija 6 (git reset): traži se 'test-fajl.txt'
+  if (level.id === 17) {
+    if (subCmd === 'reset' && arg1 && arg1 !== 'test-fajl.txt') {
+      return `Tačna je komanda git reset! 👏 U ovoj lekciji želimo da izbacimo 'test-fajl.txt' iz staging zone. Pokreni: git reset test-fajl.txt`;
+    }
+  }
+
+  // Nivo 2 Lekcija 7 (git revert): traži se HEAD ili commit
+  if (level.id === 18) {
+    if (subCmd === 'revert') {
+      if (!arg1) {
+        return `Bravo za komandu git revert! 👏 Navedi commit koji želiš da poništiš (poslednji commit je HEAD). Pokreni: git revert HEAD`;
+      }
+    }
+  }
+
+  // Nivo 2 Lekcija 8 (git stash): traži se stash pa stash pop
+  if (level.id === 19) {
+    if (subCmd === 'stash') {
+      if (arg1 === 'pop') {
+        // pop is valid
+      } else if (newState.stash && newState.stash.length > 0) {
+        return `Odlično, izmene su privremeno sačuvane u stash-u! 👏 Sada ih vrati nazad komandom: git stash pop`;
+      }
+    }
+  }
+
+  // Nivo 2 Lekcija 9 (git commit --amend): traži se favicon.ico
+  if (level.id === 20) {
+    if (subCmd === 'commit') {
+      if (!parts.includes('--amend')) {
+        return `Ne želimo praviti novi commit, već prepraviti postojeći! 💡 Iskoristi opciju --amend: git commit --amend -m "Popravi meni i dodaj favicon"`;
+      }
+      if (newState.workingDirectory.untracked.includes('favicon.ico')) {
+        return `Zaboravljeni fajl favicon.ico još nije dodat u staging! 💡 Prvo ga dodaj: git add favicon.ico, a zatim pokreni: git commit --amend -m "Popravi meni i dodaj favicon"`;
+      }
+    }
+  }
+
+  // Nivo 2 Bonus A (git tag): traži se 'v1.0'
+  if (level.id === 21) {
+    if (subCmd === 'tag' && arg1 && arg1 !== 'v1.0') {
+      return `Bravo za korišćenje git tag komande! 👏 Za potrebe ove lekcije tag treba da se zove tačno 'v1.0'. Pokreni: git tag v1.0`;
+    }
+  }
+
+  // Nivo 2 Bonus B (git diff grana1..grana2): traži se 'main..kontakt-forma'
+  if (level.id === 22) {
+    if (subCmd === 'diff' && arg1 && !arg1.includes('kontakt-forma')) {
+      return `Dobar pokušaj! 👏 Za ovu lekciju poredimo main i kontakt-forma granu. Pokreni: git diff main..kontakt-forma`;
+    }
+  }
+
+  return null;
+};
+

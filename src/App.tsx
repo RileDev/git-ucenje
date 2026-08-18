@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { executeGitCommand } from './gitEngine';
 import type { RepoState } from './gitEngine';
-import { levels } from './levelsData';
+import { getGitkoSmartAdvice, levels } from './levelsData';
 import type { Level } from './levelsData';
 import { GitGraph } from './GitGraph';
 import { useWindowManager } from './hooks/useWindowManager';
@@ -456,7 +456,7 @@ export const App: React.FC = () => {
     if (!cmd) return;
 
     const currentHist: TerminalEntry[] = [...terminalHistory, { input: cmd, output: '' }];
-    const result = executeGitCommand(repoState, cmd);
+    const result = executeGitCommand(repoState, cmd, userName);
 
     if (result.error) {
       if (soundEnabled) playXpError();
@@ -509,21 +509,33 @@ export const App: React.FC = () => {
       if (solved && allExpectedRun) {
         if (soundEnabled) playXpSuccess();
         setTaskMsg('Fenomenalno! Uspešno si rešio sve zadatke za ovu lekciju! Pređi na sledeći korak.');
+        setGitkoMsg('Bravo! 🎉 Lekcija je uspešno rešena! Možeš preći na sledeći nivo.');
         const nextCompleted = Array.from(new Set([...completedLevels, currentLevel.id]));
         setCompletedLevels(nextCompleted);
         localStorage.setItem('luna_git_completed', JSON.stringify(nextCompleted));
-        setShowLevelSuccessModal(true);
-      } else if (solved && !allExpectedRun) {
-        const missingCmds = currentLevel.expectedCommands.filter(cmdName => {
-          const cleaned = cmdName.toLowerCase().trim();
-          if (cleaned === 'git checkout' || cleaned === 'git switch') {
-            return !updatedCommandsRun.includes('git checkout') && !updatedCommandsRun.includes('git switch');
-          }
-          return !updatedCommandsRun.includes(cleaned);
-        });
-        setTaskMsg(`Skoro gotovo! Preostalo je da isprobaš i komandu: ${missingCmds.join(', ')}!`);
+        setTimeout(() => {
+          setShowLevelSuccessModal(true);
+        }, 700);
       } else {
-        setTaskMsg('Odličan korak! Nastavi da pratiš uputstvo i unesi sledeću komandu.');
+        const smartAdvice = getGitkoSmartAdvice(currentLevel, cmd, repoState, result.newState);
+        if (smartAdvice) {
+          setGitkoMsg(smartAdvice);
+          setTaskMsg(smartAdvice);
+          if (soundEnabled) playTone(520, 0, 0.12, 'sine');
+        } else if (solved && !allExpectedRun) {
+          const missingCmds = currentLevel.expectedCommands.filter(cmdName => {
+            const cleaned = cmdName.toLowerCase().trim();
+            if (cleaned === 'git checkout' || cleaned === 'git switch') {
+              return !updatedCommandsRun.includes('git checkout') && !updatedCommandsRun.includes('git switch');
+            }
+            return !updatedCommandsRun.includes(cleaned);
+          });
+          const msg = `Skoro gotovo! Preostalo je da isprobaš i komandu: ${missingCmds.join(', ')}!`;
+          setTaskMsg(msg);
+          setGitkoMsg(msg);
+        } else {
+          setTaskMsg('Odličan korak! Nastavi da pratiš uputstvo i unesi sledeću komandu.');
+        }
       }
     }
 
@@ -685,6 +697,7 @@ export const App: React.FC = () => {
                 onResetLevel={resetCurrentLevel}
                 soundEnabled={soundEnabled}
                 setGitkoMsg={setGitkoMsg}
+                userName={userName}
               />
             )}
 

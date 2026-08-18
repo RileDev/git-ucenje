@@ -183,11 +183,34 @@ export const isFileIgnored = (filename: string, patterns: string[] = []): boolea
   });
 };
 
+// Helper to format email and author signature from system username
+export const formatAuthorEmail = (name: string): string => {
+  if (!name) return 'luka@kafic-luna.rs';
+  const cleanName = name
+    .toLowerCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'dj')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  
+  return `${cleanName || 'luka'}@kafic-luna.rs`;
+};
+
+export const formatAuthorSignature = (name: string): string => {
+  const cleanName = name?.trim() || 'Luka';
+  const email = formatAuthorEmail(cleanName);
+  return `${cleanName} <${email}>`;
+};
+
 // Izvršavanje git komande nad stanjem i vraćanje novog stanja i ispisa terminala
 export const executeGitCommand = (
   state: RepoState,
-  commandLine: string
+  commandLine: string,
+  currentUserName: string = 'Luka'
 ): { newState: RepoState; output: string; error: boolean } => {
+  const userSignature = formatAuthorSignature(currentUserName);
   const trimmed = commandLine.trim();
   if (!trimmed) {
     return { newState: state, output: '', error: false };
@@ -568,7 +591,7 @@ export const executeGitCommand = (
           id: newCommitId,
           parentIds: currentCommitId ? [currentCommitId, mergeCommitId] : [mergeCommitId],
           message: commitMsg,
-          author: 'Luka <luka@kafic-luna.rs>',
+          author: userSignature,
           date: new Date().toLocaleDateString('sr-RS')
         };
 
@@ -601,7 +624,7 @@ export const executeGitCommand = (
         id: newCommitId,
         parentIds,
         message: msg,
-        author: 'Luka <luka@kafic-luna.rs>',
+        author: userSignature,
         date: new Date().toLocaleDateString('sr-RS')
       };
 
@@ -659,11 +682,21 @@ export const executeGitCommand = (
         return { newState: state, output: out.trimEnd(), error: false };
       }
 
+      const resolveDisplayAuthor = (author?: string): string => {
+        if (!author || author === 'Luka' || author.startsWith('Luka ') || author.includes('luka@kafic-luna.rs')) {
+          return userSignature;
+        }
+        if (author === 'Iva' || author.startsWith('Iva ') || author.includes('iva@kafic-luna.rs')) {
+          return 'Iva <iva@kafic-luna.rs>';
+        }
+        return author;
+      };
+
       let out = '';
       const reversed = [...commitList].reverse();
       reversed.forEach((c, idx) => {
         out += `commit ${c.id}7a3f89e21b04c99a8e0f6d\n`;
-        out += `Author: ${c.author || 'Luka <luka@kafic-luna.rs>'}\n`;
+        out += `Author: ${resolveDisplayAuthor(c.author)}\n`;
         out += `Date:   ${c.date || 'Danas, 17:00:00'}\n\n`;
         out += `    ${c.message}\n`;
         if (idx < reversed.length - 1) out += `\n`;
@@ -693,7 +726,7 @@ export const executeGitCommand = (
         };
       }
 
-      // Diff for untracked files is empty!
+      // Diff for untracked files explains why output is empty
       const staged = state.index.staged;
       const modified = state.workingDirectory.modified;
       const untracked = state.workingDirectory.untracked;
@@ -701,7 +734,7 @@ export const executeGitCommand = (
       if (untracked.length > 0 && modified.length === 0 && staged.length === 0) {
         return {
           newState: state,
-          output: ``, // Intentional empty diff for untracked files as explained in lesson!
+          output: `(Prazan ispis)\n\nℹ️ Objašnjenje: 'git diff' poredi samo fajlove koje Git već prati (tracked).\nFajlovi u kafic-luna/ (index.html, style.css, script.js) su trenutno 'Untracked' (nepraćeni), pa ih git diff ne prikazuje dok se ne dodaju u staging zonu pomoću 'git add'.`,
           error: false
         };
       }
@@ -929,7 +962,7 @@ export const executeGitCommand = (
         id: newCommitId,
         parentIds: [currentCommitId, targetCommitId],
         message: `Merge grane '${targetBranch}' u ${currentBranch}`,
-        author: 'Luka <luka@kafic-luna.rs>',
+        author: userSignature,
         date: new Date().toLocaleDateString('sr-RS')
       };
 
@@ -1054,7 +1087,7 @@ export const executeGitCommand = (
         id: newCommitId,
         parentIds: currentCommitId ? [currentCommitId] : [],
         message: `Revert "${targetCommit.message}"`,
-        author: 'Luka <luka@kafic-luna.rs>',
+        author: userSignature,
         date: new Date().toLocaleDateString('sr-RS')
       };
 
