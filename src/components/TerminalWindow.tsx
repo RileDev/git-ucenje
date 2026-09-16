@@ -12,6 +12,8 @@ interface Props {
   setTerminalInput: (v: string) => void;
   onSubmit: (e: React.FormEvent) => void;
   onResetLevel: () => void;
+  onUndo: () => void;
+  canUndo: boolean;
   soundEnabled: boolean;
   setGitkoMsg: (msg: string) => void;
   userName?: string;
@@ -26,6 +28,8 @@ export const TerminalWindow: React.FC<Props> = ({
   setTerminalInput,
   onSubmit,
   onResetLevel,
+  onUndo,
+  canUndo,
   soundEnabled,
   setGitkoMsg,
   userName = 'Luka',
@@ -80,6 +84,24 @@ export const TerminalWindow: React.FC<Props> = ({
           }}
         >
           🔄 Resetuj nivo
+        </button>
+        <button
+          className="xp-button"
+          disabled={!canUndo}
+          title={canUndo ? 'Vrati poslednju komandu unazad, korak po korak' : 'Nema šta da se vrati unazad'}
+          onClick={(e) => { e.stopPropagation(); onUndo(); }}
+          style={{
+            padding: '2px 8px',
+            fontSize: 11,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+            fontWeight: 'normal',
+            cursor: canUndo ? 'pointer' : 'default',
+            opacity: canUndo ? 1 : 0.5,
+          }}
+        >
+          ↶ Undo
         </button>
         <button
           className="xp-button"

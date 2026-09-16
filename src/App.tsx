@@ -20,6 +20,7 @@ import { StartMenu } from './components/StartMenu';
 import { CreditsWindow } from './components/CreditsWindow';
 import { ControlPanelWindow } from './components/ControlPanelWindow';
 import { CertificateWindow } from './components/CertificateWindow';
+import { ProgressWindow } from './components/ProgressWindow';
 import { TriviaWindow } from './components/TriviaWindow';
 import { TerminalWindow } from './components/TerminalWindow';
 import { InstructionsWindow } from './components/InstructionsWindow';
@@ -191,6 +192,19 @@ const computeInitialWindows = (): WindowState[] => {
       isMaximized: false,
       active: false,
     },
+    {
+      id: 'progress',
+      title: 'Moj napredak',
+      icon: 'xp-notepad.png',
+      x: 160,
+      y: 60,
+      w: 460,
+      h: 460,
+      isOpen: false,
+      isMinimized: false,
+      isMaximized: false,
+      active: false,
+    },
   ];
 };
 
@@ -251,6 +265,10 @@ export const App: React.FC = () => {
       return { ...prev, [levelId]: { ...current, [hint]: true } };
     });
   }, []);
+  // How many times the student has hit "🔄 Resetuj nivo" per lesson — shown in the progress view.
+  const [resetCounts, setResetCounts] = useState<Record<number, number>>(() =>
+    readSavedJson('luna_git_reset_counts', {}, v => typeof v === 'object' && v !== null && !Array.isArray(v))
+  );
 
   // ── Repo / terminal state ─────────────────────────────────────────────────
   const [repoState, setRepoState] = useState<RepoState>(() => getLevelInitialState(currentLevel, userCommitMessages));
@@ -262,6 +280,10 @@ export const App: React.FC = () => {
   // Bumped on every lesson load/reset; used as a React key to reset per-lesson window state (hints, open file, browser tab).
   const [levelSessionKey, setLevelSessionKey] = useState(0);
   const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // One step of undo within the current lesson — a snapshot taken before each successful
+  // command, so a mistake can be walked back without throwing away the whole lesson (unlike
+  // "🔄 Resetuj nivo"). Capped and stops growing once the lesson is solved.
+  const [undoStack, setUndoStack] = useState<{ repoState: RepoState; terminalHistory: TerminalEntry[]; levelCommandsRun: string[] }[]>([]);
 
   // ── Window manager ────────────────────────────────────────────────────────
   const wm = useWindowManager(computeInitialWindows());
@@ -372,6 +394,7 @@ export const App: React.FC = () => {
     setLevelCommandsRun([]);
     setLevelSolved(false);
     setShowLevelSuccessModal(false);
+    setUndoStack([]);
     setLevelSessionKey(k => k + 1);
     setTaskMsg(levelTaskMessage(level));
   }, [setTaskMsg, userCommitMessages]);
@@ -419,6 +442,7 @@ export const App: React.FC = () => {
   useEffect(() => { localStorage.setItem('luna_git_completed', JSON.stringify(completedLevels)); }, [completedLevels]);
   useEffect(() => { localStorage.setItem('luna_git_commit_messages', JSON.stringify(userCommitMessages)); }, [userCommitMessages]);
   useEffect(() => { localStorage.setItem('luna_git_hints_opened', JSON.stringify(hintsOpened)); }, [hintsOpened]);
+  useEffect(() => { localStorage.setItem('luna_git_reset_counts', JSON.stringify(resetCounts)); }, [resetCounts]);
   useEffect(() => () => {
     if (successTimerRef.current) clearTimeout(successTimerRef.current);
   }, []);
@@ -525,6 +549,11 @@ export const App: React.FC = () => {
       currentHist[currentHist.length - 1].isError = true;
       setTerminalHistory(currentHist);
     } else {
+      // Snapshot before applying the command, so it can be undone — only while the lesson isn't
+      // solved yet, matching where the "↶ Undo" button stays enabled.
+      if (!levelSolved) {
+        setUndoStack(prev => [...prev.slice(-19), { repoState, terminalHistory, levelCommandsRun }]);
+      }
       setRepoState(result.newState);
       currentHist[currentHist.length - 1].output = result.output;
       setTerminalHistory(currentHist);
@@ -645,6 +674,7 @@ export const App: React.FC = () => {
       setCompletedLevels([]);
       setUserCommitMessages({});
       setHintsOpened({});
+      setResetCounts({});
       loadLevel(0);
       setShowSolitaire(false);
       setIsStartOpen(false);
@@ -663,9 +693,20 @@ export const App: React.FC = () => {
         input: 'clear',
         output: `Stanje za lekciju "${currentLevel.title}" je uspešno resetovano.\nUnesite komandu...`,
       }]);
+      setResetCounts(prev => ({ ...prev, [currentLevel.id]: (prev[currentLevel.id] ?? 0) + 1 }));
       if (soundEnabled) playTone(400, 0, 0.25, 'sine');
       setIsStartOpen(false);
     }
+  };
+
+  const handleUndoCommand = () => {
+    if (undoStack.length === 0 || levelSolved) return;
+    const last = undoStack[undoStack.length - 1];
+    setRepoState(last.repoState);
+    setTerminalHistory(last.terminalHistory);
+    setLevelCommandsRun(last.levelCommandsRun);
+    setUndoStack(prev => prev.slice(0, -1));
+    if (soundEnabled) playTone(350, 0, 0.15, 'sine');
   };
 
   // ── Settings handlers ─────────────────────────────────────────────────────
@@ -790,6 +831,8 @@ export const App: React.FC = () => {
                 setTerminalInput={setTerminalInput}
                 onSubmit={handleTerminalSubmit}
                 onResetLevel={resetCurrentLevel}
+                onUndo={handleUndoCommand}
+                canUndo={undoStack.length > 0 && !levelSolved}
                 soundEnabled={soundEnabled}
                 setGitkoMsg={setGitkoMsg}
                 userName={userName}
@@ -843,6 +886,16 @@ export const App: React.FC = () => {
                 studentName={studentName}
                 setStudentName={setStudentName}
                 assistantChar={assistantChar}
+              />
+            )}
+
+            {win.id === 'progress' && (
+              <ProgressWindow
+                completedLevels={completedLevels}
+                hintsOpened={hintsOpened}
+                resetCounts={resetCounts}
+                currentLevelId={currentLevel.id}
+                onSelectLevel={(idx) => loadLevel(idx)}
               />
             )}
           </XpWindow>

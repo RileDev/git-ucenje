@@ -103,6 +103,10 @@ export const StartMenu: React.FC<StartMenuProps> = ({
           <img src="xp-certificate.png" alt="" style={{ width: 16, height: 16, objectFit: 'contain', marginRight: 6 }} />
           <span>XP Sertifikat</span>
         </div>
+        <div className="xp-start-item" onClick={() => onOpen('progress')}>
+          <img src="xp-notepad.png" alt="" style={{ width: 16, height: 16, objectFit: 'contain', marginRight: 6 }} />
+          <span>Moj napredak</span>
+        </div>
         <div className="xp-start-separator" />
         <div className="xp-start-item" onClick={onResetCurrent}>
           <img src="xp-lightning.png" alt="" style={{ width: 16, height: 16, objectFit: 'contain', marginRight: 6 }} />
