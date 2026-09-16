@@ -626,6 +626,53 @@ Pošto se \`main\` nije menjao dok si ti radio/la, ovo će biti najjednostavniji
     livePreview: { hasAbout: true, hasMenu: false, hasContact: false }
   },
   {
+    // Non-sequential id (13.5) is deliberate: it sits between Lekcija 2.2 (id 13) and Lekcija 2.3
+    // (id 14) in the *array*, but numeric comparisons elsewhere (LiveBrowserWindow's
+    // `currentLevel.id > 13/14`, USER_MESSAGE_COMMITS' `id > 7 && id <= 22`) need it to land
+    // strictly between those neighbors, which a plain next integer wouldn't guarantee.
+    id: 13.5,
+    levelNumber: 2,
+    lessonNumber: 2.5,
+    title: "Lekcija 2.5: Pogledaj se pre nego što spojiš",
+    category: "Nivo 2: Srednji nivo",
+    story: "Meni sekcija je uspešno spojena u main. Pre nego što kreneš u sledeći, teži zadatak (spajanje koje NEĆE proći glatko), zastani na trenutak i pogledaj gde se sve grane trenutno nalaze.",
+    whyItMatters: "Pre svakog merge-a, dobra navika je proveriti koje grane postoje i gde svaka od njih pokazuje — ovo su dve komande koje ćeš koristiti stalno, ne samo u ovoj lekciji.",
+    task: "Prikaži sve grane sa poslednjim commit-om na svakoj (opcija -v), zatim se nakratko prebaci na meni-sekcija da vidiš da grana i dalje postoji, pa se vrati nazad na main.",
+    hint1: "Koja komanda prikazuje sve grane, a koja opcija uz nju dodaje i poslednji commit svake?",
+    hint2: "git branch -v\ngit switch meni-sekcija\ngit switch main",
+    expectedResult: "git branch -v prikazuje main i meni-sekcija na istom commit-u (C3) — merge ih nije obrisao, samo je main 'sustigao' meni-sekcija.",
+    quickOverview: "git branch -v — pregled svih grana sa poslednjim commit-om svake.",
+    description: `### Priča
+Meni sekcija je uspešno spojena u main. Pre nego što kreneš u sledeći, teži zadatak (spajanje koje **neće** proći glatko), zastani na trenutak i pogledaj gde se sve grane trenutno nalaze.
+
+### Zašto je ovo bitno
+Pre svakog merge-a, dobra navika je proveriti koje grane postoje i gde svaka od njih pokazuje — \`git branch -v\` i \`git switch\` su komande koje ćeš koristiti stalno, ne samo u ovoj lekciji.`,
+    initialState: {
+      isInitialized: true,
+      commits: {
+        C1: { id: 'C1', parentIds: [], message: 'Dodaj početnu strukturu Kafić Luna sajta' },
+        C2: { id: 'C2', parentIds: ['C1'], message: 'Dodaj "O nama" sekciju', features: ['about'] },
+        C3: { id: 'C3', parentIds: ['C2'], message: 'Dodaj Meni sekciju i cenovnik kafe', author: 'Luka', features: ['menu'] }
+      },
+      branches: { main: 'C3', 'meni-sekcija': 'C3' },
+      head: { type: 'branch', target: 'main' },
+      index: { staged: [], deleted: [] },
+      workingDirectory: {
+        files: ['index.html', 'style.css', 'script.js', '.gitignore'],
+        modified: [],
+        untracked: []
+      },
+      hasRemote: true
+    },
+    validate: (state: RepoState, commandsRun = []) => {
+      const ranBranch = commandsRun.some(c => c.startsWith('git branch'));
+      const ranSwitch = commandsRun.includes('git switch') || commandsRun.includes('git checkout');
+      return ranBranch && ranSwitch && state.head.type === 'branch' && state.head.target === 'main';
+    },
+    expectedCommands: ["git branch", "git switch"],
+    livePreview: { hasAbout: true, hasMenu: true, hasContact: false }
+  },
+  {
     id: 14,
     levelNumber: 2,
     lessonNumber: 3,
@@ -1299,6 +1346,16 @@ export const getGitkoSmartAdvice = (
     }
     if (subCmd === 'switch' && arg1 === 'main') {
       return `Super, sad si na main grani! 👏 Sledeći korak je da u nju spojiš završeni rad sa grane 'meni-sekcija'.`;
+    }
+  }
+
+  // Nivo 2 Lekcija 2.5 (pogled na grane pre merge-a)
+  if (level.id === 13.5) {
+    if ((subCmd === 'switch' || subCmd === 'checkout') && arg1 && arg1 !== 'main' && arg1 !== 'meni-sekcija') {
+      return `Tačna komanda! 👏 Za ovu lekciju su bitne samo dve grane koje već postoje — 'main' i 'meni-sekcija'.`;
+    }
+    if ((subCmd === 'switch' || subCmd === 'checkout') && newState.head.target === 'meni-sekcija') {
+      return `Odlično, i dalje postoji! 👏 Sada se vrati nazad na 'main'.`;
     }
   }
 
