@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import type { WindowState } from '../types';
 import type { RepoState } from '../gitEngine';
 import type { Level } from '../levelsData';
-import { isFileIgnored } from '../gitEngine';
+import { getFileContent, hasConflictMarkers, isFileIgnored } from '../gitEngine';
 import { playTone } from '../audio';
 
 interface Props {
@@ -48,16 +48,16 @@ export const ProjectExplorerWindow: React.FC<Props> = ({
     ])
   );
 
-  // If level 3 (.gitignore), ensure node_modules, secrets.txt, .DS_Store, .gitignore are in the folder
-  if (currentLevel.lessonNumber === 3) {
+  // .gitignore lesson: ensure node_modules, secrets.txt, .DS_Store, .gitignore are in the folder
+  if (currentLevel.id === 4) {
     if (!allKnownFiles.includes('node_modules')) allKnownFiles.push('node_modules');
     if (!allKnownFiles.includes('secrets.txt')) allKnownFiles.push('secrets.txt');
     if (!allKnownFiles.includes('.DS_Store')) allKnownFiles.push('.DS_Store');
     if (!allKnownFiles.includes('.gitignore')) allKnownFiles.push('.gitignore');
   }
 
-  // If level 9 (amend / favicon), ensure favicon.ico is present
-  if (currentLevel.lessonNumber === 9 && !allKnownFiles.includes('favicon.ico')) {
+  // --amend lesson: ensure favicon.ico is present
+  if (currentLevel.id === 20 && !allKnownFiles.includes('favicon.ico')) {
     allKnownFiles.push('favicon.ico');
   }
 
@@ -137,7 +137,7 @@ export const ProjectExplorerWindow: React.FC<Props> = ({
       return;
     }
 
-    const content = repoState.fileContents?.[filename] || `// Sadržaj fajla ${filename}\n// Kafić Luna sajt`;
+    const content = getFileContent(repoState, filename) ?? `// Sadržaj fajla ${filename}\n// Kafić Luna sajt`;
     setPreviewContent(content);
     setEditedText(content);
   };
@@ -220,18 +220,16 @@ export const ProjectExplorerWindow: React.FC<Props> = ({
 </body>
 </html>`;
 
+    // Only fixes the file content; the conflict counts as resolved once the user runs `git add index.html`.
     setRepoState(prev => ({
       ...prev,
       fileContents: {
         ...prev.fileContents,
         'index.html': resolvedHtml,
       },
-      mergeInProgress: {
-        ...prev.mergeInProgress!,
-        conflictFile: undefined,
-      },
     }));
     setPreviewContent(resolvedHtml);
+    setIsEditing(false);
   };
 
   const actualWidth = isMobile
@@ -434,7 +432,7 @@ export const ProjectExplorerWindow: React.FC<Props> = ({
                     className="xp-button"
                     onClick={() => {
                       setIsEditing(true);
-                      setEditedText(repoState.fileContents?.[selectedFile] || previewContent || '');
+                      setEditedText(getFileContent(repoState, selectedFile) ?? previewContent ?? '');
                     }}
                     style={{ fontSize: 10, padding: '1px 8px' }}
                   >
@@ -456,7 +454,12 @@ export const ProjectExplorerWindow: React.FC<Props> = ({
           </div>
 
           {/* Merge conflict resolver button */}
-          {repoState.mergeInProgress && repoState.mergeInProgress.conflictFile === selectedFile && (
+          {repoState.mergeInProgress?.conflictFile === selectedFile && !hasConflictMarkers(getFileContent(repoState, selectedFile)) && (
+            <div style={{ margin: '2px 0', padding: 6, backgroundColor: '#f0fdf4', border: '1px solid #4ade80', borderRadius: 4, fontSize: 10.5, color: '#166534', fontWeight: 'bold' }}>
+              ✅ Konflikt je razrešen u fajlu. Sada ga označi kao rešen u terminalu: git add {selectedFile}
+            </div>
+          )}
+          {repoState.mergeInProgress?.conflictFile === selectedFile && hasConflictMarkers(getFileContent(repoState, selectedFile)) && (
             <div style={{ margin: '2px 0', padding: 6, backgroundColor: '#fef2f2', border: '1px solid #f87171', borderRadius: 4 }}>
               <div style={{ fontSize: 10.5, color: '#991b1b', fontWeight: 'bold', marginBottom: 4 }}>
                 ⚠️ U ovom fajlu postoji merge konflikt između grana!

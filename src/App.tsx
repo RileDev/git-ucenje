@@ -202,38 +202,58 @@ const RESIZABLE_IDS = new Set([
   'videoLesson',
 ]);
 
-const INITIAL_GREETING =
-  'Zdravo! Ja sam Gitko. Dobrodošli u novi projekat "Kafić Luna"! Pogledaj raspored prozora i uputstvo sa leve strane!';
+const readSavedLevelIdx = (): number => {
+  const saved = parseInt(localStorage.getItem('luna_git_current_level') ?? '', 10);
+  return Number.isInteger(saved) && saved >= 0 && saved < levels.length ? saved : 0;
+};
+
+const readSavedJson = <T,>(key: string, fallback: T, isValid: (v: unknown) => boolean): T => {
+  try {
+    const saved = localStorage.getItem(key);
+    if (!saved) return fallback;
+    const parsed: unknown = JSON.parse(saved);
+    return isValid(parsed) ? (parsed as T) : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+const cloneState = (state: RepoState): RepoState => JSON.parse(JSON.stringify(state));
+
+const levelWelcomeHistory = (level: Level): TerminalEntry[] => [{
+  output: `Dobrodošli u Projekat "Kafić Luna" — ${level.title}\nUkucajte 'git help' da vidite podržane komande.`,
+}];
+
+const levelTaskMessage = (level: Level): string =>
+  `${level.title}. Pogledaj zadatak u levom prozoru i unesi prvu komandu!`;
 
 export const App: React.FC = () => {
   // ── Level progress ────────────────────────────────────────────────────────
-  const [currentLevelIdx, setCurrentLevelIdx] = useState<number>(() => {
-    const saved = localStorage.getItem('luna_git_current_level');
-    return saved ? parseInt(saved, 10) : 0;
-  });
-  const [completedLevels, setCompletedLevels] = useState<number[]>(() => {
-    const saved = localStorage.getItem('luna_git_completed');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [currentLevelIdx, setCurrentLevelIdx] = useState<number>(readSavedLevelIdx);
+  const [completedLevels, setCompletedLevels] = useState<number[]>(() =>
+    readSavedJson<number[]>('luna_git_completed', [], v => Array.isArray(v) && v.every(n => typeof n === 'number'))
+  );
   const currentLevel: Level = levels[currentLevelIdx] || levels[0];
 
   // ── Repo / terminal state ─────────────────────────────────────────────────
-  const [repoState, setRepoState] = useState<RepoState>(() =>
-    JSON.parse(JSON.stringify(currentLevel.initialState))
-  );
-  const [terminalHistory, setTerminalHistory] = useState<TerminalEntry[]>([]);
+  const [repoState, setRepoState] = useState<RepoState>(() => cloneState(currentLevel.initialState));
+  const [terminalHistory, setTerminalHistory] = useState<TerminalEntry[]>(() => levelWelcomeHistory(currentLevel));
   const [terminalInput, setTerminalInput] = useState<string>('');
   const [levelCommandsRun, setLevelCommandsRun] = useState<string[]>([]);
+  // Set once the current lesson is solved, so later commands don't re-trigger the success modal.
+  const [levelSolved, setLevelSolved] = useState(false);
+  // Bumped on every lesson load/reset; used as a React key to reset per-lesson window state (hints, open file, browser tab).
+  const [levelSessionKey, setLevelSessionKey] = useState(0);
+  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Window manager ────────────────────────────────────────────────────────
   const wm = useWindowManager(computeInitialWindows());
   const { windows, setWindows } = wm;
 
   // ── Zoom / Accessibility state per window ─────────────────────────────────
-  const [zoomScales, setZoomScales] = useState<Record<string, number>>(() => {
-    const saved = localStorage.getItem('luna_git_zoom_scales');
-    return saved ? JSON.parse(saved) : { instructions: 1.05 };
-  });
+  const [zoomScales, setZoomScales] = useState<Record<string, number>>(() =>
+    readSavedJson<Record<string, number>>('luna_git_zoom_scales', { instructions: 1.05 }, v => typeof v === 'object' && v !== null)
+  );
 
   useEffect(() => {
     localStorage.setItem('luna_git_zoom_scales', JSON.stringify(zoomScales));
@@ -315,11 +335,32 @@ export const App: React.FC = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   // ── Gitko assistant messages ──────────────────────────────────────────────
-  const [gitkoMsg, setGitkoMsg] = useState<string>(INITIAL_GREETING);
-  const [lastTaskMsg, setLastTaskMsg] = useState<string>(INITIAL_GREETING);
+  const [gitkoMsg, setGitkoMsg] = useState<string>(() => levelTaskMessage(currentLevel));
+  const [lastTaskMsg, setLastTaskMsg] = useState<string>(() => levelTaskMessage(currentLevel));
   const setTaskMsg = useCallback((msg: string) => {
     setGitkoMsg(msg);
     setLastTaskMsg(msg);
+  }, []);
+
+  // ── Level loading ─────────────────────────────────────────────────────────
+  // Every lesson change or reset goes through here, so it also works when the
+  // target index equals the current one (e.g. "reset all" while on lesson 0).
+  const loadLevel = useCallback((idx: number) => {
+    const level = levels[idx] || levels[0];
+    if (successTimerRef.current) clearTimeout(successTimerRef.current);
+    setCurrentLevelIdx(idx);
+    setRepoState(cloneState(level.initialState));
+    setTerminalHistory(levelWelcomeHistory(level));
+    setTerminalInput('');
+    setLevelCommandsRun([]);
+    setLevelSolved(false);
+    setShowLevelSuccessModal(false);
+    setLevelSessionKey(k => k + 1);
+    setTaskMsg(levelTaskMessage(level));
+  }, [setTaskMsg]);
+
+  const markLevelCompleted = useCallback((id: number) => {
+    setCompletedLevels(prev => (prev.includes(id) ? prev : [...prev, id]));
   }, []);
 
   // ── Drag / resize refs ────────────────────────────────────────────────────
@@ -357,17 +398,11 @@ export const App: React.FC = () => {
   useEffect(() => { localStorage.setItem('luna_git_student_name', studentName); }, [studentName]);
   useEffect(() => { localStorage.setItem('luna_git_sound', soundEnabled ? 'true' : 'false'); }, [soundEnabled]);
 
-  useEffect(() => {
-    setRepoState(JSON.parse(JSON.stringify(currentLevel.initialState)));
-    setTerminalHistory([{
-      output: `Dobrodošli u Projekat "Kafić Luna" — ${currentLevel.title}\nUkucajte 'git help' da vidite podržane komande.`,
-    }]);
-    setTerminalInput('');
-    setLevelCommandsRun([]);
-    setTaskMsg(`${currentLevel.title}. Pogledaj zadatak u levom prozoru i unesi prvu komandu!`);
-    localStorage.setItem('luna_git_current_level', currentLevelIdx.toString());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentLevelIdx]);
+  useEffect(() => { localStorage.setItem('luna_git_current_level', currentLevelIdx.toString()); }, [currentLevelIdx]);
+  useEffect(() => { localStorage.setItem('luna_git_completed', JSON.stringify(completedLevels)); }, [completedLevels]);
+  useEffect(() => () => {
+    if (successTimerRef.current) clearTimeout(successTimerRef.current);
+  }, []);
 
   // ── Drag handlers ─────────────────────────────────────────────────────────
   const handleGlobalMouseMove = (e: MouseEvent) => {
@@ -455,6 +490,12 @@ export const App: React.FC = () => {
     const cmd = terminalInput.trim();
     if (!cmd) return;
 
+    if (cmd === 'clear') {
+      setTerminalHistory([]);
+      setTerminalInput('');
+      return;
+    }
+
     const currentHist: TerminalEntry[] = [...terminalHistory, { input: cmd, output: '' }];
     const result = executeGitCommand(repoState, cmd, userName);
 
@@ -470,6 +511,9 @@ export const App: React.FC = () => {
       setTerminalHistory(currentHist);
 
       const updatedCommandsRun = [...levelCommandsRun];
+      const recordCommand = (c: string) => {
+        if (!updatedCommandsRun.includes(c)) updatedCommandsRun.push(c);
+      };
       const typedCleaned = cmd.toLowerCase().trim().replace(/\s+/g, ' ');
 
       currentLevel.expectedCommands.forEach(expectedCmd => {
@@ -479,23 +523,23 @@ export const App: React.FC = () => {
           (expectedCleaned === 'git checkout' && typedCleaned.startsWith('git switch')) ||
           (expectedCleaned === 'git switch' && typedCleaned.startsWith('git checkout'))
         ) {
-          if (!updatedCommandsRun.includes(expectedCleaned)) {
-            updatedCommandsRun.push(expectedCleaned);
-          }
+          recordCommand(expectedCleaned);
         }
       });
 
-      const parts = cmd.toLowerCase().trim().split(/\s+/);
-      const gitCmd = parts[0];
-      const subCmd = parts[1];
-      if (gitCmd === 'git' && subCmd) {
-        const generalCmd = `git ${subCmd}`;
-        if (!updatedCommandsRun.includes(generalCmd)) {
-          updatedCommandsRun.push(generalCmd);
-        }
+      const parts = typedCleaned.split(' ');
+      if (parts[0] === 'git' && parts[1]) {
+        recordCommand(`git ${parts[1]}`);
       }
+      // Full command (with flags/arguments) so validators can inspect e.g. `--graph` or `main..kontakt-forma`.
+      recordCommand(typedCleaned);
 
       setLevelCommandsRun(updatedCommandsRun);
+
+      if (levelSolved) {
+        setTerminalInput('');
+        return;
+      }
 
       const solved = currentLevel.validate(result.newState, updatedCommandsRun);
       const allExpectedRun = currentLevel.expectedCommands.length === 0 || currentLevel.expectedCommands.every(cmdName => {
@@ -510,10 +554,10 @@ export const App: React.FC = () => {
         if (soundEnabled) playXpSuccess();
         setTaskMsg('Fenomenalno! Uspešno si rešio sve zadatke za ovu lekciju! Pređi na sledeći korak.');
         setGitkoMsg('Bravo! 🎉 Lekcija je uspešno rešena! Možeš preći na sledeći nivo.');
-        const nextCompleted = Array.from(new Set([...completedLevels, currentLevel.id]));
-        setCompletedLevels(nextCompleted);
-        localStorage.setItem('luna_git_completed', JSON.stringify(nextCompleted));
-        setTimeout(() => {
+        setLevelSolved(true);
+        markLevelCompleted(currentLevel.id);
+        if (successTimerRef.current) clearTimeout(successTimerRef.current);
+        successTimerRef.current = setTimeout(() => {
           setShowLevelSuccessModal(true);
         }, 700);
       } else {
@@ -545,20 +589,24 @@ export const App: React.FC = () => {
   // ── Level navigation ──────────────────────────────────────────────────────
   const handleNextLevel = () => {
     setShowLevelSuccessModal(false);
+    // Reading-only lessons have nothing to solve, so reading them and moving on completes them.
+    if (currentLevel.isReadingOnly) markLevelCompleted(currentLevel.id);
     if (currentLevelIdx < levels.length - 1) {
-      setCurrentLevelIdx(prev => prev + 1);
+      loadLevel(currentLevelIdx + 1);
     } else {
       setShowSolitaire(true);
       setTaskMsg('ČESTITAMO! Uspešno si prošao kompletan kurs za Git na projektu Kafić Luna!');
     }
   };
 
+  const handlePrevLevel = () => {
+    if (currentLevelIdx > 0) loadLevel(currentLevelIdx - 1);
+  };
+
   const resetAllProgress = () => {
     if (window.confirm('Da li ste sigurni da želite da obrišete kompletan napredak u učenju?')) {
-      localStorage.removeItem('luna_git_current_level');
-      localStorage.removeItem('luna_git_completed');
       setCompletedLevels([]);
-      setCurrentLevelIdx(0);
+      loadLevel(0);
       setShowSolitaire(false);
       setIsStartOpen(false);
       setWindows(computeInitialWindows());
@@ -571,8 +619,7 @@ export const App: React.FC = () => {
         `Da li ste sigurni da želite da resetujete stanje za trenutnu lekciju "${currentLevel.title}"?`
       )
     ) {
-      setRepoState(JSON.parse(JSON.stringify(currentLevel.initialState)));
-      setLevelCommandsRun([]);
+      loadLevel(currentLevelIdx);
       setTerminalHistory([{
         input: 'clear',
         output: `Stanje za lekciju "${currentLevel.title}" je uspešno resetovano.\nUnesite komandu...`,
@@ -600,18 +647,23 @@ export const App: React.FC = () => {
 
   // ── Start menu actions ────────────────────────────────────────────────────
   const handleStartLearning = () => {
-    setCurrentLevelIdx(0);
+    loadLevel(0);
     setIsStartOpen(false);
   };
 
   const handleContinueProgress = () => {
-    const nextLevelId =
-      completedLevels.length > 0
-        ? Math.min(Math.max(...completedLevels) + 1, levels.length)
-        : 1;
-    const nextIdx = levels.findIndex(l => l.id === nextLevelId);
-    if (nextIdx !== -1) setCurrentLevelIdx(nextIdx);
+    // First lesson that isn't completed yet (or the last lesson if everything is done).
+    const firstUnfinished = levels.findIndex(l => !completedLevels.includes(l.id));
+    loadLevel(firstUnfinished === -1 ? levels.length - 1 : firstUnfinished);
     setIsStartOpen(false);
+  };
+
+  const handleOpenCertificateFromVideo = () => {
+    // "Preuzmi Sertifikat" on the final video lesson is how that lesson is finished.
+    const lastLevel = levels[levels.length - 1];
+    if (currentLevel.id === lastLevel.id) markLevelCompleted(lastLevel.id);
+    wm.closeWindow('videoLesson');
+    wm.openWindow('certificate');
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -654,14 +706,15 @@ export const App: React.FC = () => {
           >
             {win.id === 'instructions' && (
               <InstructionsWindow
+                key={levelSessionKey}
                 win={win}
                 isMobile={isMobile}
                 currentLevel={currentLevel}
                 currentLevelIdx={currentLevelIdx}
-                setCurrentLevelIdx={setCurrentLevelIdx}
                 completedLevels={completedLevels}
-                setShowSolitaire={setShowSolitaire}
-                onOpenVideo={() => wm.focusWindow('videoLesson')}
+                onPrev={handlePrevLevel}
+                onNext={handleNextLevel}
+                onOpenVideo={() => wm.openWindow('videoLesson')}
               />
             )}
 
@@ -676,6 +729,7 @@ export const App: React.FC = () => {
 
             {win.id === 'projectExplorer' && (
               <ProjectExplorerWindow
+                key={levelSessionKey}
                 win={win}
                 isMobile={isMobile}
                 repoState={repoState}
@@ -703,6 +757,7 @@ export const App: React.FC = () => {
 
             {win.id === 'liveBrowser' && (
               <LiveBrowserWindow
+                key={levelSessionKey}
                 win={win}
                 isMobile={isMobile}
                 repoState={repoState}
@@ -714,10 +769,7 @@ export const App: React.FC = () => {
               <VideoLessonWindow
                 win={win}
                 isMobile={isMobile}
-                onOpenCertificate={() => {
-                  wm.closeWindow('videoLesson');
-                  wm.focusWindow('certificate');
-                }}
+                onOpenCertificate={handleOpenCertificateFromVideo}
               />
             )}
 

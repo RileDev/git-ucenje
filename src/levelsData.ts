@@ -1,4 +1,4 @@
-import { type RepoState } from './gitEngine';
+import { type RepoState, hasConflictMarkers } from './gitEngine';
 
 export interface Level {
   id: number;
@@ -22,7 +22,6 @@ export interface Level {
     hasAbout?: boolean;
     hasMenu?: boolean;
     hasContact?: boolean;
-    isStyleBroken?: boolean;
     isConflict?: boolean;
     hasFavicon?: boolean;
     tag?: string;
@@ -86,7 +85,9 @@ Kroz ceo ovaj nivo pratićeš radne prozore na radnoj površini:
 *   **Projekat: kafic-luna** — pravi fajlovi tvog sajta sa statusima
 *   **Terminal** — gde kucaš Git komande
 *   **Vizuelni Git Graf** — grafički prikaz istorije commit-ova
-*   **Live Web Pregledač** — sajt Kafić Luna uživo!`,
+*   **Live Web Pregledač** — sajt Kafić Luna uživo!
+
+💡 Usput, ako ikad zaboraviš neku komandu i ne želiš odmah da otvaraš Hint, ukucaj \`git help\` u terminalu — ispisaće ti spisak svih podržanih komandi u ovoj aplikaciji.`,
     initialState: {
       isInitialized: false,
       commits: {},
@@ -225,7 +226,9 @@ Međutim, zaboravljeno je ono najbitnije: **\`secrets.txt\`** koji sadrži priva
         state.gitignorePatterns?.some(p => p.includes('secrets.txt')) ||
         state.fileContents?.['.gitignore']?.includes('secrets.txt');
       const hasRanStatus = commandsRun.some(c => c.toLowerCase().includes('status'));
-      return Boolean(hasSecrets && hasRanStatus);
+      // secrets.txt must not be staged or already committed — ignoring it afterwards doesn't undo that
+      const secretsLeaked = state.index.staged.includes('secrets.txt') || Object.keys(state.commits).length > 0;
+      return Boolean(hasSecrets && hasRanStatus && !secretsLeaked);
     },
     expectedCommands: ["git status"],
     livePreview: { hasAbout: false, hasMenu: false, hasContact: false }
@@ -469,7 +472,7 @@ Rad retko ide u jednom smeru — timovi i AI alati stalno dodaju izmene na zajed
       return commitIds.length >= 2 && state.branches['main'] !== 'C1';
     },
     expectedCommands: ["git pull"],
-    livePreview: { hasAbout: true, hasMenu: false, hasContact: false }
+    livePreview: { hasAbout: false, hasMenu: false, hasContact: false }
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -611,7 +614,7 @@ Pošto se \`main\` nije menjao dok si ti radio/la, ovo će biti najjednostavniji
       );
     },
     expectedCommands: ["git merge"],
-    livePreview: { hasAbout: true, hasMenu: true, hasContact: false }
+    livePreview: { hasAbout: true, hasMenu: false, hasContact: false }
   },
   {
     id: 14,
@@ -623,7 +626,7 @@ Pošto se \`main\` nije menjao dok si ti radio/la, ovo će biti najjednostavniji
     whyItMatters: "Konflikti nisu greška — normalan su deo timskog rada čim dvoje ljudi nezavisno promene isti red istog fajla. Iskusni developeri mirno rešavaju konflikte.",
     task: "Pokušaj da spojiš kontakt-forma granu u main. Git će javiti konflikt u index.html — razreši ga (zadrži oba linka), dodaj index.html i završi commit.",
     hint1: "Git ostavlja markere <<<<<<<, =======, >>>>>>>. Možeš u Folderu Projekta kliknuti na 'Razreši konflikt' ili pripremiti sa git add index.html pa git commit.",
-    hint2: "git merge kontakt-forma -> git add index.html -> git commit -m \"Spoji kontakt formu i meni\"",
+    hint2: "1. git merge kontakt-forma\n2. U Folderu Projekta otvori index.html i klikni 'Razreši konflikt'\n3. git add index.html\n4. git commit -m \"Spoji kontakt formu i meni\"",
     expectedResult: "Terminal javlja CONFLICT u index.html. Nakon rešavanja, Git Graf prikazuje pravi spajajući merge commit sa dve linije koje se stapaju.",
     quickOverview: "Konflikt: uredi sporni deo između <<<<<<< i >>>>>>>, pa git add + git commit.",
     description: `### Priča
@@ -650,16 +653,17 @@ Konflikti se dešavaju čim dvoje ljudi (ili ti i AI asistent) nezavisno promene
       hasRemote: true
     },
     validate: (state: RepoState) => {
-      const mainCommitId = state.branches['main'];
-      const mainCommit = state.commits[mainCommitId];
-      return (
+      const mainCommit = state.commits[state.branches['main']];
+      return Boolean(
         mainCommit &&
         mainCommit.parentIds.length >= 2 &&
-        !state.mergeInProgress
+        mainCommit.parentIds.includes(state.branches['kontakt-forma']) &&
+        !state.mergeInProgress &&
+        !hasConflictMarkers(state.fileContents?.['index.html'])
       );
     },
     expectedCommands: ["git merge", "git add", "git commit"],
-    livePreview: { hasAbout: true, hasMenu: true, hasContact: true }
+    livePreview: { hasAbout: true, hasMenu: true, hasContact: false }
   },
   {
     id: 15,
@@ -699,7 +703,9 @@ Kad radiš na pravom serveru bez GUI alata, ova kombinacija opcija ti daje grafi
       hasRemote: true
     },
     validate: (_state: RepoState, commandsRun = []) => {
-      return commandsRun.some(c => c.toLowerCase().includes('log') && (c.includes('--graph') || c.includes('--all') || c.includes('--oneline')));
+      return commandsRun.some(c =>
+        c.startsWith('git log') && c.includes('--oneline') && c.includes('--graph') && c.includes('--all')
+      );
     },
     expectedCommands: ["git log"],
     livePreview: { hasAbout: true, hasMenu: true, hasContact: true }
@@ -739,11 +745,12 @@ Radi samo sa izmenama koje još nisi ni dodao (\`add\`) niti commit-ovao. Ideala
       },
       hasRemote: true
     },
-    validate: (state: RepoState) => {
-      return !state.workingDirectory.modified.includes('style.css');
+    validate: (state: RepoState, commandsRun = []) => {
+      const usedRestore = commandsRun.some(c => c.startsWith('git restore') || c.startsWith('git checkout'));
+      return usedRestore && !state.workingDirectory.modified.includes('style.css');
     },
     expectedCommands: [],
-    livePreview: { hasAbout: true, hasMenu: true, hasContact: true, isStyleBroken: true }
+    livePreview: { hasAbout: true, hasMenu: true, hasContact: true }
   },
   {
     id: 17,
@@ -820,8 +827,8 @@ Kad je nešto već deljeno sa timom, brisanje istorije je opasno. \`revert\` pra
       hasRemote: true
     },
     validate: (state: RepoState) => {
-      const commitIds = Object.keys(state.commits);
-      return commitIds.length >= 3 && state.branches['main'] !== 'C2';
+      const mainCommit = state.commits[state.branches['main']];
+      return mainCommit?.message === 'Revert "Pokvaren link ka meniju"';
     },
     expectedCommands: ["git revert"],
     livePreview: { hasAbout: true, hasMenu: true, hasContact: true }
@@ -861,8 +868,12 @@ Umesto da praviš "smeće" commit samo da bi promenio/la granu, \`stash\` privre
       hasRemote: true
     },
     validate: (state: RepoState, commandsRun = []) => {
-      const hasStash = commandsRun.some(c => c.toLowerCase().includes('stash'));
-      return hasStash && (!state.stash || state.stash.length === 0);
+      const restoredFromStash = commandsRun.some(c => c === 'git stash pop' || c === 'git stash apply');
+      return (
+        restoredFromStash &&
+        (!state.stash || state.stash.length === 0) &&
+        state.workingDirectory.modified.includes('script.js')
+      );
     },
     expectedCommands: ["git stash"],
     livePreview: { hasAbout: true, hasMenu: true, hasContact: true }
@@ -902,12 +913,17 @@ Upravo si commit-ovao/la sa porukom \`"fix bag"\` — nejasno, i primetio/la si 
       hasRemote: true
     },
     validate: (state: RepoState) => {
-      const cId = state.branches['main'];
-      const commit = state.commits[cId];
-      return commit && commit.message.toLowerCase() !== 'fix bag' && !state.workingDirectory.untracked.includes('favicon.ico');
+      const commit = state.commits[state.branches['main']];
+      return Boolean(
+        commit &&
+        Object.keys(state.commits).length === 2 && // amended, not a new commit
+        commit.message.toLowerCase() !== 'fix bag' &&
+        !state.workingDirectory.untracked.includes('favicon.ico') &&
+        !state.index.staged.includes('favicon.ico')
+      );
     },
     expectedCommands: ["git add", "git commit"],
-    livePreview: { hasAbout: true, hasMenu: true, hasContact: true, hasFavicon: true }
+    livePreview: { hasAbout: true, hasMenu: true, hasContact: true, hasFavicon: false }
   },
   {
     id: 21,
@@ -980,7 +996,7 @@ Pre nego što spojiš Ivinu novu granu, želiš unapred da vidiš *sve* razlike 
       hasRemote: true
     },
     validate: (_state: RepoState, commandsRun = []) => {
-      return commandsRun.some(c => c.toLowerCase().includes('diff'));
+      return commandsRun.some(c => c.startsWith('git diff') && c.includes('..') && c.includes('kontakt-forma'));
     },
     expectedCommands: ["git diff"],
     livePreview: { hasAbout: true, hasMenu: true, hasContact: true, hasFavicon: true, tag: 'v1.0' }
@@ -1048,7 +1064,7 @@ Dobrodošli u završni nivo kursa! U ovom nivou prelazimo sa simuliranog lokalno
 export const getGitkoSmartAdvice = (
   level: Level,
   cmd: string,
-  _prevState: RepoState,
+  prevState: RepoState,
   newState: RepoState
 ): string | null => {
   const cleanCmd = cmd.trim();
@@ -1076,6 +1092,12 @@ export const getGitkoSmartAdvice = (
 
   // Nivo 1 Lekcija 3 (.gitignore)
   if (level.id === 4 || level.id === 5) {
+    if (subCmd === 'commit' && prevState.index.staged.includes('secrets.txt')) {
+      return `Ups! 🚨 secrets.txt je upravo trajno upisan u istoriju commit-ova. Upravo zato ga moramo ignorisati pre commit-a. Klikni '🔄 Resetuj nivo' i probaj ponovo: prvo .gitignore, pa tek onda add/commit.`;
+    }
+    if (newState.index.staged.includes('secrets.txt')) {
+      return `Pazi! ⚠️ secrets.txt je sada u staging zoni i ušao bi u sledeći commit. Izvuci ga komandom: git reset secrets.txt — pa ga dopiši u .gitignore (File Explorer → .gitignore → 'Uredi').`;
+    }
     if (subCmd === 'add' || subCmd === 'commit') {
       if (newState.workingDirectory.untracked.includes('secrets.txt')) {
         return `Pazi na tajne podatke! ⚠️ Pre nego što dodaš fajlove, prvo u File Exploreru otvori .gitignore, klikni 'Uredi', dopiši 'secrets.txt' i klikni 'Sačuvaj'.`;
@@ -1098,15 +1120,6 @@ export const getGitkoSmartAdvice = (
     if (subCmd === 'commit') {
       if (newState.index.staged.length === 0) {
         return `Staging zona je još prazna! 💡 Prvo pripremi fajlove komandom: git add .`;
-      }
-    }
-  }
-
-  // Nivo 1 Lekcija 6 (git commit -m "...")
-  if (level.id === 7) {
-    if (subCmd === 'commit') {
-      if (!parts.includes('-m')) {
-        return `Bravo za git commit! 👏 Ne zaboravi da dodaš opisnu poruku uz opciju -m. Pokreni npr: git commit -m "Dodaj početnu strukturu Kafić Luna sajta"`;
       }
     }
   }
@@ -1213,18 +1226,18 @@ export const getGitkoSmartAdvice = (
 
   // Nivo 2 Lekcija 7 (git revert): traži se HEAD ili commit
   if (level.id === 18) {
-    if (subCmd === 'revert') {
-      if (!arg1) {
-        return `Bravo za komandu git revert! 👏 Navedi commit koji želiš da poništiš (poslednji commit je HEAD). Pokreni: git revert HEAD`;
-      }
+    if (subCmd === 'revert' && arg1) {
+      return `Bravo za komandu git revert! 👏 Ali ovde poništavamo baš problematičan commit C2 'Pokvaren link ka meniju'. Klikni '🔄 Resetuj nivo' i pokreni: git revert HEAD`;
     }
   }
 
   // Nivo 2 Lekcija 8 (git stash): traži se stash pa stash pop
   if (level.id === 19) {
     if (subCmd === 'stash') {
-      if (arg1 === 'pop') {
-        // pop is valid
+      if (arg1 === 'apply' && newState.stash && newState.stash.length > 0) {
+        return `Izmene su vraćene, ali stash@{0} je i dalje sačuvan! 💡 git stash pop radi oba koraka odjednom. Obriši ga sada komandom: git stash drop`;
+      } else if (arg1 === 'pop' || arg1 === 'drop') {
+        // pop is valid; drop after apply finishes the task
       } else if (newState.stash && newState.stash.length > 0) {
         return `Odlično, izmene su privremeno sačuvane u stash-u! 👏 Sada ih vrati nazad komandom: git stash pop`;
       }
@@ -1235,11 +1248,17 @@ export const getGitkoSmartAdvice = (
   if (level.id === 20) {
     if (subCmd === 'commit') {
       if (!parts.includes('--amend')) {
-        return `Ne želimo praviti novi commit, već prepraviti postojeći! 💡 Iskoristi opciju --amend: git commit --amend -m "Popravi meni i dodaj favicon"`;
+        return `Ne želimo praviti novi commit, već prepraviti postojeći! 💡 Klikni '🔄 Resetuj nivo', pa dodaj favicon i iskoristi opciju --amend: git commit --amend -m "Popravi meni i dodaj favicon"`;
       }
       if (newState.workingDirectory.untracked.includes('favicon.ico')) {
         return `Zaboravljeni fajl favicon.ico još nije dodat u staging! 💡 Prvo ga dodaj: git add favicon.ico, a zatim pokreni: git commit --amend -m "Popravi meni i dodaj favicon"`;
       }
+      if (newState.commits[newState.branches['main']]?.message.toLowerCase() === 'fix bag') {
+        return `favicon.ico je sada deo commit-a! 👏 Ostalo je još da ispraviš nejasnu poruku 'fix bag': git commit --amend -m "Popravi meni i dodaj favicon"`;
+      }
+    }
+    if (subCmd === 'add' && newState.index.staged.includes('favicon.ico') && newState.commits['C2']?.message.toLowerCase() !== 'fix bag') {
+      return `favicon.ico je u staging zoni! 💡 Pošto si poruku već ispravio/la, ponovi amend da i fajl uđe u isti commit: git commit --amend -m "Popravi meni i dodaj favicon"`;
     }
   }
 
@@ -1252,7 +1271,7 @@ export const getGitkoSmartAdvice = (
 
   // Nivo 2 Bonus B (git diff grana1..grana2): traži se 'main..kontakt-forma'
   if (level.id === 22) {
-    if (subCmd === 'diff' && arg1 && !arg1.includes('kontakt-forma')) {
+    if (subCmd === 'diff' && !(arg1?.includes('..') && arg1.includes('kontakt-forma'))) {
       return `Dobar pokušaj! 👏 Za ovu lekciju poredimo main i kontakt-forma granu. Pokreni: git diff main..kontakt-forma`;
     }
   }

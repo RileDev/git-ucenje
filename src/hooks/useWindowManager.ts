@@ -12,6 +12,16 @@ export function useWindowManager(initial: WindowState[]) {
     })));
   }, []);
 
+  // Like focusWindow, but also opens a window that is currently closed.
+  const openWindow = useCallback((id: string) => {
+    setWindows(prev => prev.map(w => ({
+      ...w,
+      active: w.id === id,
+      isOpen: w.id === id ? true : w.isOpen,
+      isMinimized: w.id === id ? false : w.isMinimized,
+    })));
+  }, []);
+
   const toggleWindow = useCallback((id: string) => {
     setWindows(prev => prev.map(w => {
       if (w.id === id) {
@@ -38,6 +48,7 @@ export function useWindowManager(initial: WindowState[]) {
     windows,
     setWindows,
     focusWindow,
+    openWindow,
     toggleWindow,
     closeWindow,
     minimizeWindow,

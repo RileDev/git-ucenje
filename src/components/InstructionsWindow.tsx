@@ -9,20 +9,21 @@ interface Props {
   isMobile: boolean;
   currentLevel: Level;
   currentLevelIdx: number;
-  setCurrentLevelIdx: React.Dispatch<React.SetStateAction<number>>;
   completedLevels: number[];
-  setShowSolitaire: (b: boolean) => void;
+  onPrev: () => void;
+  onNext: () => void;
   onOpenVideo?: () => void;
 }
 
+// Hint state resets per lesson because App keys this component by the lesson session.
 export const InstructionsWindow: React.FC<Props> = ({
   win,
   isMobile,
   currentLevel,
   currentLevelIdx,
-  setCurrentLevelIdx,
   completedLevels,
-  setShowSolitaire,
+  onPrev,
+  onNext,
   onOpenVideo,
 }) => {
   const [showHint1, setShowHint1] = useState(false);
@@ -37,10 +38,7 @@ export const InstructionsWindow: React.FC<Props> = ({
   const descFontSize  = Math.max(isMobile ? 13.5 : 10.5, Math.min(15, Math.floor(12 * scale)));
   const btnFontSize   = Math.max(10, Math.min(13, Math.floor(11.5 * scale)));
 
-  const canAdvance =
-    currentLevel.isReadingOnly ||
-    completedLevels.includes(currentLevel.id) ||
-    currentLevel.id <= Math.max(...completedLevels, 0) + 1;
+  const canAdvance = currentLevel.isReadingOnly || completedLevels.includes(currentLevel.id);
 
   return (
     <div className="xp-level-panel" style={{ height: '100%', overflowY: 'auto', padding: 14, backgroundColor: '#ffffff', color: '#1e293b' }}>
@@ -213,11 +211,7 @@ export const InstructionsWindow: React.FC<Props> = ({
         {currentLevelIdx > 0 && (
           <button
             className="xp-button"
-            onClick={() => {
-              setShowHint1(false);
-              setShowHint2(false);
-              setCurrentLevelIdx(prev => prev - 1);
-            }}
+            onClick={onPrev}
             style={{ fontSize: `${btnFontSize}px`, padding: '3px 8px' }}
           >
             ◀ Prethodna
@@ -226,15 +220,7 @@ export const InstructionsWindow: React.FC<Props> = ({
         <button
           className="xp-button xp-button-primary"
           disabled={!canAdvance}
-          onClick={() => {
-            setShowHint1(false);
-            setShowHint2(false);
-            if (currentLevelIdx < levels.length - 1) {
-              setCurrentLevelIdx(prev => prev + 1);
-            } else {
-              setShowSolitaire(true);
-            }
-          }}
+          onClick={onNext}
           style={{ fontSize: `${btnFontSize}px`, padding: '3px 10px', marginLeft: 'auto' }}
         >
           Sledeća lekcija {canAdvance ? '🔓' : '🔒'}

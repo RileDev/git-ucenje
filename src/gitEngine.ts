@@ -36,22 +36,9 @@ export interface RepoState {
   mergeInProgress?: { branch: string; commitId: string; conflictFile?: string };
 }
 
-// Inicijalno prazno stanje za Kafić Luna
-export const createEmptyState = (): RepoState => {
-  return {
-    isInitialized: false,
-    commits: {},
-    branches: {},
-    head: { type: 'branch', target: '' },
-    index: { staged: [], deleted: [] },
-    workingDirectory: {
-      files: ['index.html', 'style.css', 'script.js'],
-      modified: [],
-      untracked: ['index.html', 'style.css', 'script.js'],
-      ignored: []
-    },
-    fileContents: {
-      'index.html': `<!DOCTYPE html>
+// Podrazumevani sadržaj fajlova sajta (koristi se kad lekcija ne definiše svoj fileContents)
+export const DEFAULT_FILE_CONTENTS: { [filename: string]: string } = {
+  'index.html': `<!DOCTYPE html>
 <html lang="sr">
 <head>
   <meta charset="UTF-8">
@@ -74,7 +61,7 @@ export const createEmptyState = (): RepoState => {
   <script src="script.js"></script>
 </body>
 </html>`,
-      'style.css': `body {
+  'style.css': `body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background-color: #fdfaf6;
   color: #3d2b1f;
@@ -102,11 +89,27 @@ nav a {
   font-weight: bold;
   cursor: pointer;
 }`,
-      'script.js': `console.log("Kafić Luna sajt uspešno učitan!");
+  'script.js': `console.log("Kafić Luna sajt uspešno učitan!");
 document.addEventListener("DOMContentLoaded", () => {
   console.log("Dobrodošli u Kafić Luna!");
 });`
+};
+
+// Inicijalno prazno stanje za Kafić Luna
+export const createEmptyState = (): RepoState => {
+  return {
+    isInitialized: false,
+    commits: {},
+    branches: {},
+    head: { type: 'branch', target: '' },
+    index: { staged: [], deleted: [] },
+    workingDirectory: {
+      files: ['index.html', 'style.css', 'script.js'],
+      modified: [],
+      untracked: ['index.html', 'style.css', 'script.js'],
+      ignored: []
     },
+    fileContents: { ...DEFAULT_FILE_CONTENTS },
     hasRemote: false
   };
 };
@@ -175,6 +178,51 @@ export const getCurrentCommitId = (state: RepoState): string => {
   return state.head.target;
 };
 
+// Svi commit-ovi dostupni iz datog commit-a (uključujući i njega samog)
+export const getAncestorIds = (commits: { [id: string]: Commit }, startId: string): Set<string> => {
+  const visited = new Set<string>();
+  const stack = startId ? [startId] : [];
+  while (stack.length > 0) {
+    const id = stack.pop()!;
+    if (visited.has(id)) continue;
+    visited.add(id);
+    commits[id]?.parentIds.forEach(pId => stack.push(pId));
+  }
+  return visited;
+};
+
+export const hasConflictMarkers = (content: string | undefined): boolean =>
+  Boolean(content && (content.includes('<<<<<<<') || content.includes('>>>>>>>')));
+
+// Sadržaj fajla, uz podrazumevani sadržaj sajta ako ga lekcija nije definisala
+export const getFileContent = (state: RepoState, filename: string): string | undefined => {
+  if (state.fileContents?.[filename] !== undefined) return state.fileContents[filename];
+  return state.workingDirectory.files.includes(filename) ? DEFAULT_FILE_CONTENTS[filename] : undefined;
+};
+
+const CONFLICT_INDEX_HTML = `<!DOCTYPE html>
+<html lang="sr">
+<head>
+  <meta charset="UTF-8">
+  <title>Kafić Luna</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>☕ Kafić Luna</h1>
+    <nav>
+      <a href="#pocetna">Početna</a>
+      <a href="#onama">O nama</a>
+<<<<<<< HEAD
+      <a href="#meni">Meni</a>
+=======
+      <a href="#kontakt">Kontakt</a>
+>>>>>>> kontakt-forma
+    </nav>
+  </header>
+</body>
+</html>`;
+
 // Helper to check if file matches gitignore patterns
 export const isFileIgnored = (filename: string, patterns: string[] = []): boolean => {
   return patterns.some(p => {
@@ -233,7 +281,7 @@ export const executeGitCommand = (
   }
   if (trimmed.startsWith('cat ')) {
     const targetFile = trimmed.replace(/^cat\s+/, '').trim();
-    const content = state.fileContents?.[targetFile];
+    const content = getFileContent(state, targetFile);
     if (content !== undefined) {
       return { newState: state, output: content, error: false };
     }
@@ -389,7 +437,8 @@ export const executeGitCommand = (
       }
 
       const patterns = state.gitignorePatterns || [];
-      const staged = state.index.staged.filter(f => !isFileIgnored(f, patterns));
+      // Kao u pravom Git-u: .gitignore ne sakriva fajlove koji su već dodati u staging zonu
+      const staged = state.index.staged;
       const modified = state.workingDirectory.modified.filter(f => !isFileIgnored(f, patterns));
       const untracked = state.workingDirectory.untracked.filter(f => !isFileIgnored(f, patterns));
 
@@ -446,11 +495,21 @@ export const executeGitCommand = (
       const newStaged = new Set(state.index.staged);
       const newUntracked = [...state.workingDirectory.untracked];
       const newModified = [...state.workingDirectory.modified];
-      let filesAdded: string[] = [];
+      const filesAdded: string[] = [];
+      const conflictFile = state.mergeInProgress?.conflictFile;
+      const unresolvedConflictError = (file: string) => ({
+        newState: state,
+        output: `error: '${file}' još sadrži konfliktne markere (<<<<<<<, =======, >>>>>>>).\nPrvo razreši konflikt: u Folderu Projekta otvori ${file} i klikni 'Razreši konflikt' (ili 'Uredi'), pa ponovo pokreni git add.\n(Pravi Git bi ovo dozvolio, ali bi u istoriju ušao pokvaren kod.)`,
+        error: true
+      });
 
       if (target === '.' || target === '-A' || target === '--all') {
         const eligibleUntracked = newUntracked.filter(f => !isFileIgnored(f, patterns));
         const eligibleModified = newModified.filter(f => !isFileIgnored(f, patterns));
+
+        if (conflictFile && eligibleModified.includes(conflictFile) && hasConflictMarkers(getFileContent(state, conflictFile))) {
+          return unresolvedConflictError(conflictFile);
+        }
 
         eligibleUntracked.forEach(f => {
           newStaged.add(f);
@@ -471,7 +530,10 @@ export const executeGitCommand = (
             ...state.workingDirectory,
             untracked: remainingUntracked,
             modified: remainingModified
-          }
+          },
+          mergeInProgress: state.mergeInProgress && conflictFile && eligibleModified.includes(conflictFile)
+            ? { ...state.mergeInProgress, conflictFile: undefined }
+            : state.mergeInProgress
         };
 
         return {
@@ -496,15 +558,27 @@ export const executeGitCommand = (
         };
       }
 
+      if (isFileIgnored(fileToAdd, patterns) && !newStaged.has(fileToAdd)) {
+        return {
+          newState: state,
+          output: `Sledeće putanje su ignorisane jednim od vaših .gitignore fajlova:\n${fileToAdd}\nKoristite -f ako zaista želite da ih dodate.`,
+          error: true
+        };
+      }
+
+      if (fileToAdd === conflictFile && hasConflictMarkers(getFileContent(state, fileToAdd))) {
+        return unresolvedConflictError(fileToAdd);
+      }
+
       newStaged.add(fileToAdd);
       const updatedUntracked = newUntracked.filter(f => f !== fileToAdd);
       const updatedModified = newModified.filter(f => f !== fileToAdd);
 
       const allFiles = Array.from(new Set([...state.workingDirectory.files, fileToAdd]));
 
-      // If resolving conflict in index.html
+      // Adding the (resolved) conflict file marks the conflict as resolved
       let newMerge = state.mergeInProgress;
-      if (newMerge && (fileToAdd === 'index.html' || fileToAdd === newMerge.conflictFile)) {
+      if (newMerge && fileToAdd === newMerge.conflictFile) {
         newMerge = { ...newMerge, conflictFile: undefined };
       }
 
@@ -572,6 +646,14 @@ export const executeGitCommand = (
         };
       }
 
+      if (state.mergeInProgress?.conflictFile) {
+        return {
+          newState: state,
+          output: `error: Commit nije moguć jer imate nerešene konflikte.\n\tobostrano izmenjeno:   ${state.mergeInProgress.conflictFile}\nRazreši konflikt, pa pokreni "git add ${state.mergeInProgress.conflictFile}" i tek onda "git commit".`,
+          error: true
+        };
+      }
+
       if (state.index.staged.length === 0 && !state.mergeInProgress) {
         return {
           newState: state,
@@ -614,7 +696,11 @@ export const executeGitCommand = (
       }
 
       if (!msg) {
-        msg = "Ažuriranje Kafić Luna projekta";
+        return {
+          newState: state,
+          output: `Prekinut commit zbog prazne poruke.\nSvaki commit mora imati poruku — dodaj je opcijom -m, npr: git commit -m "Opis izmene"`,
+          error: true
+        };
       }
 
       const newCommitId = generateNextCommitId(state.commits);
@@ -640,7 +726,7 @@ export const executeGitCommand = (
 
       return {
         newState,
-        output: `[${currentBranch} (root-commit) ${newCommitId}] ${msg}\n  ${state.index.staged.length} fajlova sačuvano u istoriju.`,
+        output: `[${currentBranch}${parentIds.length === 0 ? ' (root-commit)' : ''} ${newCommitId}] ${msg}\n  ${state.index.staged.length} fajlova sačuvano u istoriju.`,
         error: false
       };
     }
@@ -781,10 +867,56 @@ export const executeGitCommand = (
         return { newState: state, output: out.trimEnd(), error: false };
       }
 
+      const isDelete = parts.includes('-d') || parts.includes('-D') || parts.includes('--delete');
+      const isRename = parts.includes('-m') || parts.includes('-M');
+      const currentBranchName = state.head.type === 'branch' ? state.head.target : null;
+
+      if (isDelete) {
+        const toDelete = bArgs[0];
+        if (state.branches[toDelete] === undefined) {
+          return { newState: state, output: `error: grana '${toDelete}' nije pronađena.`, error: true };
+        }
+        if (toDelete === currentBranchName) {
+          return {
+            newState: state,
+            output: `error: ne možete obrisati granu '${toDelete}' na kojoj se trenutno nalazite.\nPrvo pređite na drugu granu (npr. git switch main).`,
+            error: true
+          };
+        }
+        const remainingBranches = { ...state.branches };
+        delete remainingBranches[toDelete];
+        return {
+          newState: { ...state, branches: remainingBranches },
+          output: `Obrisana grana ${toDelete} (bila je ${state.branches[toDelete] || 'prazna'}).`,
+          error: false
+        };
+      }
+
+      if (isRename) {
+        const [oldName, newName] = bArgs.length >= 2 ? bArgs : [currentBranchName, bArgs[0]];
+        if (!oldName || state.branches[oldName] === undefined) {
+          return { newState: state, output: `error: grana '${oldName ?? 'HEAD'}' nije pronađena.`, error: true };
+        }
+        if (oldName === newName) {
+          return { newState: state, output: `Grana '${newName}' već ima to ime.`, error: false };
+        }
+        const renamedBranches = { ...state.branches, [newName]: state.branches[oldName] };
+        delete renamedBranches[oldName];
+        return {
+          newState: {
+            ...state,
+            branches: renamedBranches,
+            head: currentBranchName === oldName ? { type: 'branch', target: newName } : state.head
+          },
+          output: `Grana '${oldName}' je preimenovana u '${newName}'.`,
+          error: false
+        };
+      }
+
       const branchName = bArgs[0];
       const currentCommitId = getCurrentCommitId(state);
 
-      if (state.branches[branchName]) {
+      if (state.branches[branchName] !== undefined) {
         return {
           newState: state,
           output: `fatal: grana sa imenom '${branchName}' već postoji.`,
@@ -839,6 +971,13 @@ export const executeGitCommand = (
       const currentCommitId = getCurrentCommitId(state);
 
       if (isCreateAndSwitch) {
+        if (state.branches[targetName] !== undefined) {
+          return {
+            newState: state,
+            output: `fatal: grana sa imenom '${targetName}' već postoji.\nDa pređeš na nju, koristi: git switch ${targetName}`,
+            error: true
+          };
+        }
         const newState: RepoState = {
           ...state,
           branches: {
@@ -895,6 +1034,14 @@ export const executeGitCommand = (
         };
       }
 
+      if (state.mergeInProgress) {
+        return {
+          newState: state,
+          output: `fatal: Spajanje grane '${state.mergeInProgress.branch}' je već u toku.\nZavrši ga (git add + git commit) ili ga prekini pre novog spajanja.`,
+          error: true
+        };
+      }
+
       const currentBranch = state.head.type === 'branch' ? state.head.target : 'main';
       const targetCommitId = state.branches[targetBranch];
 
@@ -908,8 +1055,17 @@ export const executeGitCommand = (
 
       const currentCommitId = state.branches[currentBranch];
 
-      // Fast-forward case
-      if (targetBranch === 'meni-sekcija') {
+      // Nothing to merge: same branch, or target is already part of the current history
+      if (targetBranch === currentBranch || getAncestorIds(state.commits, currentCommitId).has(targetCommitId)) {
+        return {
+          newState: state,
+          output: `Već je ažurno (Already up to date).`,
+          error: false
+        };
+      }
+
+      // Fast-forward: current branch hasn't moved since the target branched off
+      if (!currentCommitId || getAncestorIds(state.commits, targetCommitId).has(currentCommitId)) {
         const newState: RepoState = {
           ...state,
           branches: {
@@ -919,19 +1075,13 @@ export const executeGitCommand = (
         };
         return {
           newState,
-          output: `Ažuriranje ${currentCommitId || 'C1'}..${targetCommitId}\nFast-forward spajanje uspešno!\n index.html | 15 +++++++++++++++\n style.css  | 10 ++++++++++\n 2 fajla izmenjena, 25 linija dodato(+)`,
+          output: `Ažuriranje ${currentCommitId || '(prazno)'}..${targetCommitId}\nFast-forward spajanje uspešno!\n index.html | 15 +++++++++++++++\n style.css  | 10 ++++++++++\n 2 fajla izmenjena, 25 linija dodato(+)`,
           error: false
         };
       }
 
-      // Conflict case for 'kontakt-forma'
+      // Diverged histories: Iva's 'kontakt-forma' edits the same nav line -> conflict
       if (targetBranch === 'kontakt-forma') {
-        const conflictContent = `<<<<<<< HEAD
-      <a href="#meni">Meni</a>
-=======
-      <a href="#kontakt">Kontakt</a>
->>>>>>> kontakt-forma`;
-
         const newState: RepoState = {
           ...state,
           mergeInProgress: {
@@ -945,7 +1095,7 @@ export const executeGitCommand = (
           },
           fileContents: {
             ...state.fileContents,
-            'index.html': conflictContent
+            'index.html': CONFLICT_INDEX_HTML
           }
         };
 
@@ -979,66 +1129,101 @@ export const executeGitCommand = (
       };
     }
 
-    case 'restore': {
-      const targetFile = parts[2];
-      if (!targetFile) {
-        return {
-          newState: state,
-          output: `fatal: morate navesti fajl za restore.`,
-          error: true
-        };
-      }
-
-      const updatedModified = state.workingDirectory.modified.filter(f => f !== targetFile);
-      const newState: RepoState = {
-        ...state,
-        workingDirectory: {
-          ...state.workingDirectory,
-          modified: updatedModified
-        }
-      };
-
-      return {
-        newState,
-        output: `Fajl '${targetFile}' je vraćen u čisto stanje iz poslednjeg commit-a (odbačene lokalne izmene).`,
-        error: false
-      };
-    }
-
+    case 'restore':
     case 'reset': {
-      const isHard = parts.includes('--hard');
-      const targetArg = parts.slice(2).filter(p => !p.startsWith('-'))[0] || '';
+      // Uklanja fajlove iz staging zone. Bez ijednog commit-a fajl ponovo postaje nepraćen (untracked).
+      const unstage = (files: string[]): RepoState => {
+        const toUnstage = files.filter(f => state.index.staged.includes(f));
+        const hasCommits = Object.keys(state.commits).length > 0;
+        return {
+          ...state,
+          index: { ...state.index, staged: state.index.staged.filter(f => !toUnstage.includes(f)) },
+          workingDirectory: {
+            ...state.workingDirectory,
+            modified: hasCommits
+              ? Array.from(new Set([...state.workingDirectory.modified, ...toUnstage]))
+              : state.workingDirectory.modified,
+            untracked: hasCommits
+              ? state.workingDirectory.untracked
+              : Array.from(new Set([...state.workingDirectory.untracked, ...toUnstage]))
+          }
+        };
+      };
 
-      if (targetArg && targetArg !== 'HEAD') {
-        const fileToUnstage = targetArg.replace(/^HEAD\s+/, '').trim();
-        const updatedStaged = state.index.staged.filter(f => f !== fileToUnstage);
-        const updatedModified = Array.from(new Set([...state.workingDirectory.modified, fileToUnstage]));
+      if (subCmd === 'restore') {
+        const isStaged = parts.includes('--staged') || parts.includes('-S');
+        const targetFile = parts.slice(2).filter(p => !p.startsWith('-'))[0];
+        if (!targetFile) {
+          return {
+            newState: state,
+            output: `fatal: morate navesti fajl za restore.`,
+            error: true
+          };
+        }
+
+        if (isStaged) {
+          if (!state.index.staged.includes(targetFile)) {
+            return { newState: state, output: `Fajl '${targetFile}' nije u staging zoni — nema šta da se ukloni.`, error: false };
+          }
+          return {
+            newState: unstage([targetFile]),
+            output: `Fajl '${targetFile}' je uklonjen iz staging zone (izmene su ostale na disku).`,
+            error: false
+          };
+        }
+
+        if (!state.workingDirectory.modified.includes(targetFile)) {
+          return {
+            newState: state,
+            output: state.workingDirectory.files.includes(targetFile)
+              ? `Fajl '${targetFile}' nema nesačuvanih izmena — nema šta da se vrati.`
+              : `error: putanja '${targetFile}' se ne poklapa ni sa jednim fajlom poznatim Git-u.`,
+            error: !state.workingDirectory.files.includes(targetFile)
+          };
+        }
 
         const newState: RepoState = {
           ...state,
-          index: { ...state.index, staged: updatedStaged },
           workingDirectory: {
             ...state.workingDirectory,
-            modified: updatedModified
+            modified: state.workingDirectory.modified.filter(f => f !== targetFile)
           }
         };
 
         return {
           newState,
-          output: `Nepripremljene izmene nakon resetovanja (Unstaged):\nM\t${fileToUnstage}`,
+          output: `Fajl '${targetFile}' je vraćen u čisto stanje iz poslednjeg commit-a (odbačene lokalne izmene).`,
+          error: false
+        };
+      }
+
+      const isHard = parts.includes('--hard');
+      const targetArg = parts.slice(2).filter(p => !p.startsWith('-') && p !== 'HEAD')[0] || '';
+
+      if (targetArg) {
+        if (!state.index.staged.includes(targetArg)) {
+          return {
+            newState: state,
+            output: `Fajl '${targetArg}' nije u staging zoni — nema šta da se resetuje.`,
+            error: false
+          };
+        }
+        return {
+          newState: unstage([targetArg]),
+          output: `Nepripremljene izmene nakon resetovanja (Unstaged):\nM\t${targetArg}`,
           error: false
         };
       }
 
       if (isHard) {
         const currentCommitId = getCurrentCommitId(state);
+        // Kao u pravom Git-u: --hard odbacuje izmene praćenih fajlova, ali ne dira nepraćene
         const newState: RepoState = {
           ...state,
           index: { staged: [], deleted: [] },
           workingDirectory: {
             ...state.workingDirectory,
-            modified: [],
-            untracked: []
+            modified: []
           }
         };
         return {
@@ -1048,26 +1233,22 @@ export const executeGitCommand = (
         };
       }
 
-      // Unstage all
-      const unstagedFiles = [...state.index.staged];
-      const newState: RepoState = {
-        ...state,
-        index: { staged: [], deleted: [] },
-        workingDirectory: {
-          ...state.workingDirectory,
-          modified: Array.from(new Set([...state.workingDirectory.modified, ...unstagedFiles]))
-        }
-      };
-
       return {
-        newState,
+        newState: unstage([...state.index.staged]),
         output: `Uklonjene pripremljene izmene iz staging zone (Unstaged all).`,
         error: false
       };
     }
 
     case 'revert': {
-      const targetCommitArg = parts[2] || 'HEAD';
+      const targetCommitArg = parts[2];
+      if (!targetCommitArg) {
+        return {
+          newState: state,
+          output: `fatal: morate navesti commit koji želite da poništite (npr. git revert HEAD).`,
+          error: true
+        };
+      }
       const currentBranch = state.head.type === 'branch' ? state.head.target : 'main';
       const currentCommitId = state.branches[currentBranch];
 
@@ -1099,15 +1280,27 @@ export const executeGitCommand = (
 
       return {
         newState,
-        output: `[${currentBranch} ${newCommitId}] Revert "${targetCommit.message}"\n 1 fajl promenjen, ispravljen meni link.`,
+        output: `[${currentBranch} ${newCommitId}] Revert "${targetCommit.message}"\n Poništene izmene iz commit-a ${commitToRevertId}.`,
         error: false
       };
     }
 
     case 'stash': {
-      const subAction = parts[2];
-      if (subAction === 'pop') {
-        if (!state.stash || state.stash.length === 0) {
+      const subAction = parts[2] || 'push';
+      const stashList = state.stash || [];
+
+      if (subAction === 'list') {
+        return {
+          newState: state,
+          output: stashList.map((entry, i) =>
+            `stash@{${i}}: WIP na ${state.head.target}: ${[...entry.staged, ...entry.modified].join(', ')}`
+          ).join('\n'),
+          error: false
+        };
+      }
+
+      if (subAction === 'pop' || subAction === 'apply' || subAction === 'drop') {
+        if (stashList.length === 0) {
           return {
             newState: state,
             output: `Nema sačuvanih izmena na stash steku (stash je prazan).`,
@@ -1115,34 +1308,48 @@ export const executeGitCommand = (
           };
         }
 
-        const popped = state.stash[0];
-        const remainingStash = state.stash.slice(1);
+        const [top, ...remainingStash] = stashList;
+
+        if (subAction === 'drop') {
+          return {
+            newState: { ...state, stash: remainingStash },
+            output: `Obrisan stash@{0} (izmene su trajno odbačene).`,
+            error: false
+          };
+        }
 
         const newState: RepoState = {
           ...state,
-          stash: remainingStash,
+          stash: subAction === 'pop' ? remainingStash : stashList,
           index: {
             ...state.index,
-            staged: Array.from(new Set([...state.index.staged, ...popped.staged]))
+            staged: Array.from(new Set([...state.index.staged, ...top.staged]))
           },
           workingDirectory: {
             ...state.workingDirectory,
-            modified: Array.from(new Set([...state.workingDirectory.modified, ...popped.modified])),
-            untracked: Array.from(new Set([...state.workingDirectory.untracked, ...popped.untracked]))
+            modified: Array.from(new Set([...state.workingDirectory.modified, ...top.modified])),
+            untracked: Array.from(new Set([...state.workingDirectory.untracked, ...top.untracked]))
           }
         };
 
         return {
           newState,
-          output: `Na grani ${state.head.target}\nIzmene vraćene sa stash steka:\n${popped.modified.map(f => `  izmenjeno: ${f}`).join('\n')}`,
+          output: `Na grani ${state.head.target}\nIzmene vraćene sa stash steka:\n${[...top.staged, ...top.modified].map(f => `  izmenjeno: ${f}`).join('\n')}` +
+            (subAction === 'apply' ? `\n(stash@{0} je i dalje sačuvan — obriši ga sa git stash drop)` : ''),
           error: false
         };
       }
 
-      // Default 'git stash'
+      if (subAction !== 'push' && subAction !== 'save') {
+        return {
+          newState: state,
+          output: `error: nepoznata stash komanda '${subAction}'. Podržano: git stash, git stash list, git stash pop, git stash apply, git stash drop.`,
+          error: true
+        };
+      }
+
       const modifiedToStash = [...state.workingDirectory.modified];
       const stagedToStash = [...state.index.staged];
-      const untrackedToStash = [...state.workingDirectory.untracked];
 
       if (modifiedToStash.length === 0 && stagedToStash.length === 0) {
         return {
@@ -1152,28 +1359,26 @@ export const executeGitCommand = (
         };
       }
 
+      // Kao u pravom Git-u, git stash (bez -u) ne sklanja nepraćene fajlove
       const newStashEntry = {
         staged: stagedToStash,
         modified: modifiedToStash,
-        untracked: untrackedToStash
+        untracked: []
       };
-
-      const currentStashList = state.stash || [];
 
       const newState: RepoState = {
         ...state,
-        stash: [newStashEntry, ...currentStashList],
+        stash: [newStashEntry, ...stashList],
         index: { staged: [], deleted: [] },
         workingDirectory: {
           ...state.workingDirectory,
-          modified: [],
-          untracked: []
+          modified: []
         }
       };
 
       return {
         newState,
-        output: `Sačuvano radno stablo i stanje index-a u WIP stash@{0}: Rad na skripti menija`,
+        output: `Sačuvano radno stablo i stanje index-a u WIP stash@{0}: ${[...stagedToStash, ...modifiedToStash].join(', ')}`,
         error: false
       };
     }
@@ -1251,13 +1456,25 @@ export const executeGitCommand = (
 
       // Check current commit
       const currentCommitId = state.branches[branch] || '';
+      const pulledMessage = 'Dodaj "O nama" sekciju na Kafić Luna sajt (od saradnika)';
+
+      // The simulated remote only has one new commit; once it's in local history there's nothing to pull
+      const alreadyPulled = [...getAncestorIds(state.commits, currentCommitId)]
+        .some(id => state.commits[id]?.message === pulledMessage);
+      if (alreadyPulled) {
+        return {
+          newState: state,
+          output: `Sa ${remote}/${branch}: Već je ažurno (Already up to date).`,
+          error: false
+        };
+      }
 
       // Create new commit representing pulled changes
       const newCommitId = generateNextCommitId(state.commits);
       const pulledCommit: Commit = {
         id: newCommitId,
         parentIds: currentCommitId ? [currentCommitId] : [],
-        message: 'Dodaj "O nama" sekciju na Kafić Luna sajt (od saradnika)',
+        message: pulledMessage,
         author: 'Iva <iva@kafic-luna.rs>',
         date: new Date().toLocaleDateString('sr-RS')
       };

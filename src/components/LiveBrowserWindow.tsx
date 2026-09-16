@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { WindowState } from '../types';
 import type { RepoState } from '../gitEngine';
+import { getAncestorIds, getCurrentCommitId } from '../gitEngine';
 import type { Level } from '../levelsData';
 
 interface Props {
@@ -19,44 +20,48 @@ export const LiveBrowserWindow: React.FC<Props> = ({
   const [activeTab, setActiveTab] = useState<'home' | 'about' | 'menu' | 'contact'>('home');
   const [orderedItem, setOrderedItem] = useState<string | null>(null);
 
-  // Dynamic conditions based on repoState and level
-  const commits = repoState.commits;
-  const commitList = Object.values(commits);
-  const currentBranch = repoState.head.type === 'branch' ? repoState.head.target : 'main';
+  // The site shows only what is in the checked-out history (HEAD and its ancestors),
+  // so e.g. the menu disappears when switching back to an unmerged main.
+  const reachableMessages = [...getAncestorIds(repoState.commits, getCurrentCommitId(repoState))]
+    .map(id => repoState.commits[id]?.message.toLowerCase() ?? '');
+  const historyMentions = (...words: string[]) => reachableMessages.some(m => words.some(w => m.includes(w)));
 
-  // Check if "O nama" is unlocked (from pulled commit or level >= 10)
+  // Each feature unlocks in its own lesson; later lessons (id past that lesson) always show it.
   const hasAbout =
     currentLevel.livePreview?.hasAbout ||
-    commitList.some(c => c.message.toLowerCase().includes('o nama') || c.message.toLowerCase().includes('saradnik')) ||
-    currentLevel.id >= 10;
+    historyMentions('o nama', 'saradnik') ||
+    currentLevel.id > 10;
 
-  // Check if "Meni" is unlocked (merged into main or on meni-sekcija branch)
   const hasMenu =
     currentLevel.livePreview?.hasMenu ||
-    currentBranch === 'meni-sekcija' ||
-    commitList.some(c => c.message.toLowerCase().includes('meni')) ||
-    currentLevel.id >= 13;
+    historyMentions('meni') ||
+    currentLevel.id > 13;
 
-  // Check if "Kontakt" is unlocked (merged or on kontakt-forma branch)
   const hasContact =
     currentLevel.livePreview?.hasContact ||
-    currentBranch === 'kontakt-forma' ||
-    commitList.some(c => c.message.toLowerCase().includes('kontakt')) ||
-    currentLevel.id >= 14;
+    historyMentions('kontakt') ||
+    currentLevel.id > 14;
 
-  // Check if button style is modified (red color from Lesson 5 of Level 2)
-  const isButtonModified =
-    repoState.workingDirectory.modified.includes('style.css') ||
-    currentLevel.livePreview?.isStyleBroken === true;
+  // Red experimental button while style.css has uncommitted changes (Nivo 2, Lekcija 5)
+  const isButtonModified = repoState.workingDirectory.modified.includes('style.css');
 
-  // Check if favicon exists
+  // Favicon shows once it is tracked (not untracked or merely staged)
   const hasFavicon =
     currentLevel.livePreview?.hasFavicon ||
-    repoState.workingDirectory.files.includes('favicon.ico') ||
-    currentLevel.id >= 20;
+    (repoState.workingDirectory.files.includes('favicon.ico') &&
+      !repoState.workingDirectory.untracked.includes('favicon.ico') &&
+      !repoState.index.staged.includes('favicon.ico'));
 
   // Check version tag
   const tagVersion = repoState.tags ? Object.keys(repoState.tags)[0] : currentLevel.livePreview?.tag;
+
+  // Fall back to the home tab if the selected section isn't part of the current history
+  const visibleTab =
+    (activeTab === 'about' && !hasAbout) ||
+    (activeTab === 'menu' && !hasMenu) ||
+    (activeTab === 'contact' && !hasContact)
+      ? 'home'
+      : activeTab;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#fdfaf6', fontFamily: 'Segoe UI, Tahoma, sans-serif' }}>
@@ -150,8 +155,8 @@ export const LiveBrowserWindow: React.FC<Props> = ({
               onClick={() => setActiveTab('home')}
               style={{
                 cursor: 'pointer',
-                color: activeTab === 'home' ? '#fdf6eb' : '#d4a373',
-                borderBottom: activeTab === 'home' ? '2px solid #d4a373' : 'none',
+                color: visibleTab === 'home' ? '#fdf6eb' : '#d4a373',
+                borderBottom: visibleTab === 'home' ? '2px solid #d4a373' : 'none',
                 paddingBottom: 2,
               }}
             >
@@ -163,8 +168,8 @@ export const LiveBrowserWindow: React.FC<Props> = ({
                 onClick={() => setActiveTab('about')}
                 style={{
                   cursor: 'pointer',
-                  color: activeTab === 'about' ? '#fdf6eb' : '#d4a373',
-                  borderBottom: activeTab === 'about' ? '2px solid #d4a373' : 'none',
+                  color: visibleTab === 'about' ? '#fdf6eb' : '#d4a373',
+                  borderBottom: visibleTab === 'about' ? '2px solid #d4a373' : 'none',
                   paddingBottom: 2,
                   animation: 'fadeIn 0.5s ease',
                 }}
@@ -178,8 +183,8 @@ export const LiveBrowserWindow: React.FC<Props> = ({
                 onClick={() => setActiveTab('menu')}
                 style={{
                   cursor: 'pointer',
-                  color: activeTab === 'menu' ? '#fdf6eb' : '#d4a373',
-                  borderBottom: activeTab === 'menu' ? '2px solid #d4a373' : 'none',
+                  color: visibleTab === 'menu' ? '#fdf6eb' : '#d4a373',
+                  borderBottom: visibleTab === 'menu' ? '2px solid #d4a373' : 'none',
                   paddingBottom: 2,
                   animation: 'fadeIn 0.5s ease',
                 }}
@@ -193,8 +198,8 @@ export const LiveBrowserWindow: React.FC<Props> = ({
                 onClick={() => setActiveTab('contact')}
                 style={{
                   cursor: 'pointer',
-                  color: activeTab === 'contact' ? '#fdf6eb' : '#d4a373',
-                  borderBottom: activeTab === 'contact' ? '2px solid #d4a373' : 'none',
+                  color: visibleTab === 'contact' ? '#fdf6eb' : '#d4a373',
+                  borderBottom: visibleTab === 'contact' ? '2px solid #d4a373' : 'none',
                   paddingBottom: 2,
                   animation: 'fadeIn 0.5s ease',
                 }}
@@ -208,7 +213,7 @@ export const LiveBrowserWindow: React.FC<Props> = ({
         {/* Tab Contents */}
         <div style={{ padding: 16, flex: 1 }}>
           {/* Početna / Home */}
-          {activeTab === 'home' && (
+          {visibleTab === 'home' && (
             <div>
               <div
                 style={{
@@ -280,7 +285,7 @@ export const LiveBrowserWindow: React.FC<Props> = ({
           )}
 
           {/* O nama / About */}
-          {activeTab === 'about' && (
+          {visibleTab === 'about' && (
             <div style={{ backgroundColor: '#ffffff', padding: 16, borderRadius: 8, border: '1px solid #eedbc5' }}>
               <h3 style={{ margin: '0 0 8px 0', fontSize: 15, color: '#3d2314' }}>📖 O Nama — Kafić Luna</h3>
               <p style={{ fontSize: 11.5, color: '#5a3d28', lineHeight: 1.6 }}>
@@ -291,7 +296,7 @@ export const LiveBrowserWindow: React.FC<Props> = ({
           )}
 
           {/* Meni / Menu */}
-          {activeTab === 'menu' && (
+          {visibleTab === 'menu' && (
             <div style={{ backgroundColor: '#ffffff', padding: 16, borderRadius: 8, border: '1px solid #eedbc5' }}>
               <h3 style={{ margin: '0 0 10px 0', fontSize: 15, color: '#3d2314' }}>📋 Meni & Cenovnik</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -325,7 +330,7 @@ export const LiveBrowserWindow: React.FC<Props> = ({
           )}
 
           {/* Kontakt / Contact */}
-          {activeTab === 'contact' && (
+          {visibleTab === 'contact' && (
             <div style={{ backgroundColor: '#ffffff', padding: 16, borderRadius: 8, border: '1px solid #eedbc5' }}>
               <h3 style={{ margin: '0 0 10px 0', fontSize: 15, color: '#3d2314' }}>✉️ Kontaktirajte Kafić Luna</h3>
               <div style={{ fontSize: 11, color: '#5a3d28', marginBottom: 10 }}>
