@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { type RepoState, type Commit, getCommitList } from './gitEngine';
 
 interface GitGraphProps {
@@ -8,6 +8,27 @@ interface GitGraphProps {
 
 export const GitGraph: React.FC<GitGraphProps> = ({ state, fontSizeMultiplier = 1.0 }) => {
   const { commits, branches, head, remoteBranches, tags } = state;
+
+  // Briefly highlight commit nodes that just appeared, so a successful command's effect on the
+  // graph is visible, not just implied by the terminal output. Skips the very first render (a
+  // lesson load, via the `key` App gives this component) so switching lessons never flashes.
+  const isFirstRenderRef = useRef(true);
+  const prevCommitIdsRef = useRef<Set<string>>(new Set());
+  const [flashIds, setFlashIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    const currentIds = new Set(Object.keys(commits));
+    if (isFirstRenderRef.current) {
+      isFirstRenderRef.current = false;
+      prevCommitIdsRef.current = currentIds;
+      return;
+    }
+    const newIds = [...currentIds].filter(id => !prevCommitIdsRef.current.has(id));
+    prevCommitIdsRef.current = currentIds;
+    if (newIds.length === 0) return;
+    setFlashIds(new Set(newIds));
+    const t = setTimeout(() => setFlashIds(new Set()), 900);
+    return () => clearTimeout(t);
+  }, [commits]);
 
   // Izračunavanje kolona (X) i redova (Y) za svaki commit
   const layout = useMemo(() => {
@@ -312,6 +333,14 @@ export const GitGraph: React.FC<GitGraphProps> = ({ state, fontSizeMultiplier = 
 
           return (
             <g key={`node-${cId}`} filter="url(#shadow)">
+              {/* New-commit flash ring */}
+              {flashIds.has(cId) && (
+                <circle cx={node.x} cy={node.y} r={14} fill="none" stroke="#fbbf24" strokeWidth={3}>
+                  <animate attributeName="r" from="14" to="32" dur="0.9s" fill="freeze" />
+                  <animate attributeName="opacity" from="0.9" to="0" dur="0.9s" fill="freeze" />
+                </circle>
+              )}
+
               {/* Active HEAD Halo */}
               {isCurrentHead && (
                 <circle

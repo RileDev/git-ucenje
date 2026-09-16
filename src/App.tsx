@@ -765,7 +765,7 @@ export const App: React.FC = () => {
                 : (win.isMaximized ? window.innerWidth : win.w);
               const graphScale = isMobile ? (actualWidth / 420) : (actualWidth / 520);
               const fontMul = Math.max(0.7, Math.min(1.35, graphScale));
-              return <GitGraph state={repoState} fontSizeMultiplier={fontMul} />;
+              return <GitGraph key={levelSessionKey} state={repoState} fontSizeMultiplier={fontMul} />;
             })()}
 
             {win.id === 'projectExplorer' && (

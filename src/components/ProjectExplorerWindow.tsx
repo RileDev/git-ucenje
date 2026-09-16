@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { WindowState } from '../types';
 import type { RepoState } from '../gitEngine';
 import type { Level } from '../levelsData';
@@ -37,6 +37,27 @@ export const ProjectExplorerWindow: React.FC<Props> = ({
   const staged = repoState.index.staged;
   const modified = repoState.workingDirectory.modified;
   const untracked = repoState.workingDirectory.untracked;
+
+  // Briefly highlight the file grid when a command changes which files are staged/modified/
+  // untracked, so the effect of a terminal command is visible here too, not just in the
+  // terminal output. Skips the first render (a lesson load resets this component via App's
+  // per-lesson `key`) so switching lessons never flashes.
+  const isFirstRenderRef = useRef(true);
+  const prevStatusSigRef = useRef('');
+  const [flash, setFlash] = useState(false);
+  const statusSignature = JSON.stringify({ staged: [...staged].sort(), modified: [...modified].sort(), untracked: [...untracked].sort() });
+  useEffect(() => {
+    if (isFirstRenderRef.current) {
+      isFirstRenderRef.current = false;
+      prevStatusSigRef.current = statusSignature;
+      return;
+    }
+    if (statusSignature === prevStatusSigRef.current) return;
+    prevStatusSigRef.current = statusSignature;
+    setFlash(true);
+    const t = setTimeout(() => setFlash(false), 900);
+    return () => clearTimeout(t);
+  }, [statusSignature]);
 
   // Determine list of files to display
   const allKnownFiles = Array.from(
@@ -278,7 +299,7 @@ export const ProjectExplorerWindow: React.FC<Props> = ({
       </div>
 
       {/* Main Files Grid View */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: 12, display: 'flex', flexWrap: 'wrap', gap: 12, alignContent: 'flex-start' }}>
+      <div className={flash ? 'xp-explorer-flash' : ''} style={{ flex: 1, overflowY: 'auto', padding: 12, display: 'flex', flexWrap: 'wrap', gap: 12, alignContent: 'flex-start' }}>
         {/* .git folder */}
         {isInitialized && (
           <div

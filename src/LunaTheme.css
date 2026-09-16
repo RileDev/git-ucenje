@@ -1255,3 +1255,15 @@ body {
     height: 50px !important;
   }
 }
+
+/* Brief highlight on the Project Explorer grid when a terminal command changes file status
+   (staged/modified/untracked), echoing the same "something just happened here" cue the
+   Git Graf gives via its new-commit flash ring. */
+@keyframes explorer-flash-pulse {
+  0%   { box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0.55); background-color: rgba(59, 130, 246, 0.06); }
+  100% { box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0); background-color: rgba(59, 130, 246, 0); }
+}
+
+.xp-explorer-flash {
+  animation: explorer-flash-pulse 0.9s ease-out;
+}
