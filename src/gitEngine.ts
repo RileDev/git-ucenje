@@ -221,6 +221,43 @@ export const getActiveCommitIds = (state: RepoState): Set<string> => {
 export const hasConflictMarkers = (content: string | undefined): boolean =>
   Boolean(content && (content.includes('<<<<<<<') || content.includes('>>>>>>>')));
 
+// Sve podržane git podkomande, za predlaganje ispravke kad student pogreši u kucanju
+const KNOWN_SUBCOMMANDS = [
+  'config', 'init', 'status', 'add', 'commit', 'log', 'diff', 'branch', 'switch', 'checkout',
+  'merge', 'restore', 'reset', 'revert', 'stash', 'tag', 'push', 'pull', 'help'
+];
+
+// Levenshtein-ova distanca — koristi se samo za predlog ispravke tipfelera, nikad za
+// otkrivanje tačnog rešenja lekcije.
+const levenshteinDistance = (a: string, b: string): number => {
+  const rows = a.length + 1;
+  const cols = b.length + 1;
+  const d: number[][] = Array.from({ length: rows }, (_, i) => [i, ...Array(cols - 1).fill(0)]);
+  for (let j = 1; j < cols; j++) d[0][j] = j;
+  for (let i = 1; i < rows; i++) {
+    for (let j = 1; j < cols; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost);
+    }
+  }
+  return d[rows - 1][cols - 1];
+};
+
+// Predlaže najbližu poznatu podkomandu ako je student verovatno samo pogrešno otkucao ime —
+// ne otkriva ništa o tome KOJU komandu lekcija traži, samo ispravlja tipfeler u onome što je
+// student već sâm pokušao da otkuca.
+export const suggestSubcommand = (typed: string): string | null => {
+  if (!typed) return null;
+  let best: string | null = null;
+  let bestDist = Infinity;
+  for (const known of KNOWN_SUBCOMMANDS) {
+    const dist = levenshteinDistance(typed, known);
+    if (dist < bestDist) { bestDist = dist; best = known; }
+  }
+  const maxAllowedDistance = typed.length <= 3 ? 1 : 2;
+  return bestDist > 0 && bestDist <= maxAllowedDistance ? best : null;
+};
+
 // Sadržaj fajla, uz podrazumevani sadržaj sajta ako ga lekcija nije definisala
 export const getFileContent = (state: RepoState, filename: string): string | undefined => {
   if (state.fileContents?.[filename] !== undefined) return state.fileContents[filename];
@@ -366,9 +403,12 @@ export const executeGitCommand = (
   // Parsiranje argumenata
   const parts = trimmed.split(/\s+/);
   if (parts[0] !== 'git') {
+    const looksLikeGitTypo = levenshteinDistance(parts[0].toLowerCase(), 'git') === 1;
     return {
       newState: state,
-      output: `Komanda '${parts[0]}' nije prepoznata. U ovoj aplikaciji vežbamo Git komande koje počinju sa 'git'.`,
+      output: looksLikeGitTypo
+        ? `Komanda '${parts[0]}' nije prepoznata. Da li ste mislili na 'git'?`
+        : `Komanda '${parts[0]}' nije prepoznata. U ovoj aplikaciji vežbamo Git komande koje počinju sa 'git'.`,
       error: true
     };
   }
@@ -1558,9 +1598,12 @@ export const executeGitCommand = (
     }
 
     default: {
+      const suggestion = suggestSubcommand(subCmd);
       return {
         newState: state,
-        output: `git: '${subCmd}' nije git komanda. Pogledajte 'git help'.`,
+        output: suggestion
+          ? `git: '${subCmd}' nije git komanda. Da li ste mislili na 'git ${suggestion}'?`
+          : `git: '${subCmd}' nije git komanda. Pogledajte 'git help'.`,
         error: true
       };
     }
