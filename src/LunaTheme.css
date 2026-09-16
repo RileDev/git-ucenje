@@ -446,6 +446,7 @@ body {
 
 .xp-start-header {
   height: 55px;
+  flex-shrink: 0;
   background: var(--xp-title-gradient, linear-gradient(to bottom, #1d52d4 0%, #3a75f1 100%));
   display: flex;
   align-items: center;
@@ -473,6 +474,12 @@ body {
 
 .xp-start-content {
   flex: 1;
+  /* Without this, a flex item's default min-height is its content size — if the left/right
+     columns ever need more room than the menu has (e.g. a new item added to either list), the
+     browser shrinks the header/footer to make room instead, which is how the footer disappeared
+     before this was added. min-height: 0 + scrolling the columns below fixes that generally,
+     not just for today's item count. */
+  min-height: 0;
   display: flex;
   background-color: #ffffff;
 }
@@ -484,6 +491,8 @@ body {
   flex-direction: column;
   gap: 5px;
   border-right: 1px solid #d3e5fa;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .xp-start-right {
@@ -493,6 +502,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .xp-start-separator {
@@ -543,6 +554,7 @@ body {
 
 .xp-start-footer {
   height: 48px;
+  flex-shrink: 0;
   background: var(--xp-title-gradient, linear-gradient(to bottom, #3a75f1 0%, #1d52d4 100%));
   display: flex;
   align-items: center;
