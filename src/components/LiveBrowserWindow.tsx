@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { WindowState } from '../types';
-import type { RepoState } from '../gitEngine';
+import type { RepoState, SiteFeature } from '../gitEngine';
 import { getAncestorIds, getCurrentCommitId } from '../gitEngine';
 import type { Level } from '../levelsData';
 
@@ -22,24 +22,26 @@ export const LiveBrowserWindow: React.FC<Props> = ({
 
   // The site shows only what is in the checked-out history (HEAD and its ancestors),
   // so e.g. the menu disappears when switching back to an unmerged main.
-  const reachableMessages = [...getAncestorIds(repoState.commits, getCurrentCommitId(repoState))]
-    .map(id => repoState.commits[id]?.message.toLowerCase() ?? '');
-  const historyMentions = (...words: string[]) => reachableMessages.some(m => words.some(w => m.includes(w)));
+  // Uses commit `features`, not message text — students write their own commit messages.
+  const reachableFeatures = new Set<SiteFeature>(
+    [...getAncestorIds(repoState.commits, getCurrentCommitId(repoState))]
+      .flatMap(id => repoState.commits[id]?.features ?? [])
+  );
 
   // Each feature unlocks in its own lesson; later lessons (id past that lesson) always show it.
   const hasAbout =
     currentLevel.livePreview?.hasAbout ||
-    historyMentions('o nama', 'saradnik') ||
+    reachableFeatures.has('about') ||
     currentLevel.id > 10;
 
   const hasMenu =
     currentLevel.livePreview?.hasMenu ||
-    historyMentions('meni') ||
+    reachableFeatures.has('menu') ||
     currentLevel.id > 13;
 
   const hasContact =
     currentLevel.livePreview?.hasContact ||
-    historyMentions('kontakt') ||
+    reachableFeatures.has('contact') ||
     currentLevel.id > 14;
 
   // Red experimental button while style.css has uncommitted changes (Nivo 2, Lekcija 5)

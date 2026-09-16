@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { executeGitCommand } from './gitEngine';
 import type { RepoState } from './gitEngine';
-import { getGitkoSmartAdvice, levels } from './levelsData';
+import { captureUserCommitMessage, getGitkoSmartAdvice, getLevelInitialState, levels } from './levelsData';
+import type { UserCommitMessages } from './levelsData';
 import type { Level } from './levelsData';
 import { GitGraph } from './GitGraph';
 import { useWindowManager } from './hooks/useWindowManager';
@@ -218,8 +219,6 @@ const readSavedJson = <T,>(key: string, fallback: T, isValid: (v: unknown) => bo
   }
 };
 
-const cloneState = (state: RepoState): RepoState => JSON.parse(JSON.stringify(state));
-
 const levelWelcomeHistory = (level: Level): TerminalEntry[] => [{
   output: `Dobrodošli u Projekat "Kafić Luna" — ${level.title}\nUkucajte 'git help' da vidite podržane komande.`,
 }];
@@ -234,9 +233,15 @@ export const App: React.FC = () => {
     readSavedJson<number[]>('luna_git_completed', [], v => Array.isArray(v) && v.every(n => typeof n === 'number'))
   );
   const currentLevel: Level = levels[currentLevelIdx] || levels[0];
+  // Commit messages the student wrote themselves, reused in later lessons' starting history
+  const [userCommitMessages, setUserCommitMessages] = useState<UserCommitMessages>(() =>
+    readSavedJson<UserCommitMessages>('luna_git_commit_messages', {}, v =>
+      typeof v === 'object' && v !== null && !Array.isArray(v) && Object.values(v).every(m => typeof m === 'string')
+    )
+  );
 
   // ── Repo / terminal state ─────────────────────────────────────────────────
-  const [repoState, setRepoState] = useState<RepoState>(() => cloneState(currentLevel.initialState));
+  const [repoState, setRepoState] = useState<RepoState>(() => getLevelInitialState(currentLevel, userCommitMessages));
   const [terminalHistory, setTerminalHistory] = useState<TerminalEntry[]>(() => levelWelcomeHistory(currentLevel));
   const [terminalInput, setTerminalInput] = useState<string>('');
   const [levelCommandsRun, setLevelCommandsRun] = useState<string[]>([]);
@@ -349,7 +354,7 @@ export const App: React.FC = () => {
     const level = levels[idx] || levels[0];
     if (successTimerRef.current) clearTimeout(successTimerRef.current);
     setCurrentLevelIdx(idx);
-    setRepoState(cloneState(level.initialState));
+    setRepoState(getLevelInitialState(level, userCommitMessages));
     setTerminalHistory(levelWelcomeHistory(level));
     setTerminalInput('');
     setLevelCommandsRun([]);
@@ -357,7 +362,7 @@ export const App: React.FC = () => {
     setShowLevelSuccessModal(false);
     setLevelSessionKey(k => k + 1);
     setTaskMsg(levelTaskMessage(level));
-  }, [setTaskMsg]);
+  }, [setTaskMsg, userCommitMessages]);
 
   const markLevelCompleted = useCallback((id: number) => {
     setCompletedLevels(prev => (prev.includes(id) ? prev : [...prev, id]));
@@ -400,6 +405,7 @@ export const App: React.FC = () => {
 
   useEffect(() => { localStorage.setItem('luna_git_current_level', currentLevelIdx.toString()); }, [currentLevelIdx]);
   useEffect(() => { localStorage.setItem('luna_git_completed', JSON.stringify(completedLevels)); }, [completedLevels]);
+  useEffect(() => { localStorage.setItem('luna_git_commit_messages', JSON.stringify(userCommitMessages)); }, [userCommitMessages]);
   useEffect(() => () => {
     if (successTimerRef.current) clearTimeout(successTimerRef.current);
   }, []);
@@ -536,7 +542,18 @@ export const App: React.FC = () => {
 
       setLevelCommandsRun(updatedCommandsRun);
 
+      // Remember the student's own commit message once the lesson is solved (and keep it in
+      // sync if they amend it afterwards), so later lessons show the same history.
+      const saveUserCommitMessage = () => {
+        const captured = captureUserCommitMessage(currentLevel, result.newState);
+        if (!captured) return;
+        setUserCommitMessages(prev =>
+          prev[captured.slot] === captured.message ? prev : { ...prev, [captured.slot]: captured.message }
+        );
+      };
+
       if (levelSolved) {
+        saveUserCommitMessage();
         setTerminalInput('');
         return;
       }
@@ -555,6 +572,7 @@ export const App: React.FC = () => {
         setTaskMsg('Fenomenalno! Uspešno si rešio sve zadatke za ovu lekciju! Pređi na sledeći korak.');
         setGitkoMsg('Bravo! 🎉 Lekcija je uspešno rešena! Možeš preći na sledeći nivo.');
         setLevelSolved(true);
+        saveUserCommitMessage();
         markLevelCompleted(currentLevel.id);
         if (successTimerRef.current) clearTimeout(successTimerRef.current);
         successTimerRef.current = setTimeout(() => {
@@ -606,6 +624,7 @@ export const App: React.FC = () => {
   const resetAllProgress = () => {
     if (window.confirm('Da li ste sigurni da želite da obrišete kompletan napredak u učenju?')) {
       setCompletedLevels([]);
+      setUserCommitMessages({});
       loadLevel(0);
       setShowSolitaire(false);
       setIsStartOpen(false);

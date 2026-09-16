@@ -511,7 +511,7 @@ Kreni na sledeću lekciju.`,
       isInitialized: true,
       commits: {
         C1: { id: 'C1', parentIds: [], message: 'Dodaj početnu strukturu Kafić Luna sajta', author: 'Luka', date: 'Danas' },
-        C2: { id: 'C2', parentIds: ['C1'], message: 'Dodaj "O nama" sekciju', author: 'Iva', date: 'Danas' }
+        C2: { id: 'C2', parentIds: ['C1'], message: 'Dodaj "O nama" sekciju', author: 'Iva', date: 'Danas', features: ['about'] }
       },
       branches: { main: 'C2' },
       head: { type: 'branch', target: 'main' },
@@ -549,7 +549,7 @@ Nova grana = izolovan prostor za rad, bez rizika da pokvariš ono što već radi
       isInitialized: true,
       commits: {
         C1: { id: 'C1', parentIds: [], message: 'Dodaj početnu strukturu Kafić Luna sajta' },
-        C2: { id: 'C2', parentIds: ['C1'], message: 'Dodaj "O nama" sekciju' }
+        C2: { id: 'C2', parentIds: ['C1'], message: 'Dodaj "O nama" sekciju', features: ['about'] }
       },
       branches: { main: 'C2' },
       head: { type: 'branch', target: 'main' },
@@ -593,8 +593,8 @@ Pošto se \`main\` nije menjao dok si ti radio/la, ovo će biti najjednostavniji
       isInitialized: true,
       commits: {
         C1: { id: 'C1', parentIds: [], message: 'Dodaj početnu strukturu Kafić Luna sajta' },
-        C2: { id: 'C2', parentIds: ['C1'], message: 'Dodaj "O nama" sekciju' },
-        C3: { id: 'C3', parentIds: ['C2'], message: 'Dodaj Meni sekciju i cenovnik kafe', author: 'Luka' }
+        C2: { id: 'C2', parentIds: ['C1'], message: 'Dodaj "O nama" sekciju', features: ['about'] },
+        C3: { id: 'C3', parentIds: ['C2'], message: 'Dodaj Meni sekciju i cenovnik kafe', author: 'Luka', features: ['menu'] }
       },
       branches: { main: 'C2', 'meni-sekcija': 'C3' },
       head: { type: 'branch', target: 'meni-sekcija' },
@@ -638,9 +638,9 @@ Konflikti se dešavaju čim dvoje ljudi (ili ti i AI asistent) nezavisno promene
       isInitialized: true,
       commits: {
         C1: { id: 'C1', parentIds: [], message: 'Početna struktura' },
-        C2: { id: 'C2', parentIds: ['C1'], message: 'O nama sekcija' },
-        C3: { id: 'C3', parentIds: ['C2'], message: 'Dodat meni', author: 'Luka' },
-        C4: { id: 'C4', parentIds: ['C2'], message: 'Dodata kontakt forma', author: 'Iva' }
+        C2: { id: 'C2', parentIds: ['C1'], message: 'O nama sekcija', features: ['about'] },
+        C3: { id: 'C3', parentIds: ['C2'], message: 'Dodat meni', author: 'Luka', features: ['menu'] },
+        C4: { id: 'C4', parentIds: ['C2'], message: 'Dodata kontakt forma', author: 'Iva', features: ['contact'] }
       },
       branches: { main: 'C3', 'kontakt-forma': 'C4' },
       head: { type: 'branch', target: 'main' },
@@ -687,9 +687,9 @@ Kad radiš na pravom serveru bez GUI alata, ova kombinacija opcija ti daje grafi
       isInitialized: true,
       commits: {
         C1: { id: 'C1', parentIds: [], message: 'Početna struktura' },
-        C2: { id: 'C2', parentIds: ['C1'], message: 'O nama sekcija' },
-        C3: { id: 'C3', parentIds: ['C2'], message: 'Dodat meni' },
-        C4: { id: 'C4', parentIds: ['C2'], message: 'Dodata kontakt forma' },
+        C2: { id: 'C2', parentIds: ['C1'], message: 'O nama sekcija', features: ['about'] },
+        C3: { id: 'C3', parentIds: ['C2'], message: 'Dodat meni', features: ['menu'] },
+        C4: { id: 'C4', parentIds: ['C2'], message: 'Dodata kontakt forma', features: ['contact'] },
         C5: { id: 'C5', parentIds: ['C3', 'C4'], message: 'Merge grane kontakt-forma u main' }
       },
       branches: { main: 'C5', 'meni-sekcija': 'C3', 'kontakt-forma': 'C4' },
@@ -732,8 +732,8 @@ Radi samo sa izmenama koje još nisi ni dodao (\`add\`) niti commit-ovao. Ideala
       isInitialized: true,
       commits: {
         C1: { id: 'C1', parentIds: [], message: 'Početna struktura' },
-        C2: { id: 'C2', parentIds: ['C1'], message: 'O nama sekcija' },
-        C3: { id: 'C3', parentIds: ['C2'], message: 'Meni i kontakt forma' }
+        C2: { id: 'C2', parentIds: ['C1'], message: 'O nama sekcija', features: ['about'] },
+        C3: { id: 'C3', parentIds: ['C2'], message: 'Meni i kontakt forma', features: ['menu', 'contact'] }
       },
       branches: { main: 'C3' },
       head: { type: 'branch', target: 'main' },
@@ -1058,6 +1058,69 @@ Dobrodošli u završni nivo kursa! U ovom nivou prelazimo sa simuliranog lokalno
     livePreview: { hasAbout: true, hasMenu: true, hasContact: true, hasFavicon: true, tag: 'v1.0' }
   }
 ];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PORUKE KOJE JE STUDENT SAM NAPISAO
+// ═══════════════════════════════════════════════════════════════════════════
+// Isti commit se pojavljuje kroz više lekcija (npr. prvi commit iz Lekcije 6).
+// Da predavač ne bi video jednu poruku u lekciji gde je student piše, a drugu,
+// unapred zadatu, u sledećoj — poruka se pamti i ubacuje u kasnije lekcije.
+
+export type UserMessageSlot = 'firstCommit' | 'contactMerge' | 'faviconAmend';
+export type UserCommitMessages = Partial<Record<UserMessageSlot, string>>;
+
+// Lekcija u kojoj student piše poruku -> kako u rešenom stanju pronaći taj commit
+const USER_MESSAGE_CAPTURE: {
+  [levelId: number]: { slot: UserMessageSlot; findCommitId: (state: RepoState) => string | undefined };
+} = {
+  // Nivo 1, Lekcija 6: git commit -m — prvi (root) commit
+  7: { slot: 'firstCommit', findCommitId: state => Object.values(state.commits).find(c => c.parentIds.length === 0)?.id },
+  // Nivo 2, Lekcija 3: merge commit koji spaja kontakt-forma
+  14: {
+    slot: 'contactMerge',
+    findCommitId: state => Object.values(state.commits)
+      .find(c => c.parentIds.length >= 2 && c.parentIds.includes(state.branches['kontakt-forma']))?.id,
+  },
+  // Nivo 2, Lekcija 9: commit ispravljen sa --amend (validacija garantuje da je to i dalje C2)
+  20: { slot: 'faviconAmend', findCommitId: state => (state.commits['C2'] ? 'C2' : undefined) },
+};
+
+// Lekcija -> koji commit-ovi u njenom početnom stanju nose poruku studenta.
+// Namerno se ne diraju commit-ovi čije poruke lekcija proverava (npr. C2 'fix bag', 'Pokvaren link ka meniju').
+const USER_MESSAGE_COMMITS: { [levelId: number]: { [commitId: string]: UserMessageSlot } } = (() => {
+  const map: { [levelId: number]: { [commitId: string]: UserMessageSlot } } = {};
+  // Prvi commit projekta, od Lekcije 7 (git log) do Bonus lekcije B
+  levels
+    .filter(l => l.id > 7 && l.id <= 22 && l.initialState.commits['C1']?.parentIds.length === 0)
+    .forEach(l => { map[l.id] = { C1: 'firstCommit' }; });
+  map[15] = { ...map[15], C5: 'contactMerge' };  // Lekcija 2.4: merge commit iz Lekcije 2.3
+  map[21] = { ...map[21], C2: 'faviconAmend' };  // Bonus A: commit ispravljen u Lekciji 2.9
+  return map;
+})();
+
+// Početno stanje lekcije sa ubačenim porukama koje je student ranije napisao
+export const getLevelInitialState = (level: Level, userMessages: UserCommitMessages): RepoState => {
+  const state: RepoState = JSON.parse(JSON.stringify(level.initialState));
+  Object.entries(USER_MESSAGE_COMMITS[level.id] ?? {}).forEach(([commitId, slot]) => {
+    const message = userMessages[slot]?.trim();
+    if (message && state.commits[commitId]) {
+      state.commits[commitId].message = message;
+    }
+  });
+  return state;
+};
+
+// Poruka koju treba zapamtiti iz (rešenog) stanja trenutne lekcije, ako je ima
+export const captureUserCommitMessage = (
+  level: Level,
+  state: RepoState
+): { slot: UserMessageSlot; message: string } | null => {
+  const capture = USER_MESSAGE_CAPTURE[level.id];
+  if (!capture) return null;
+  const commitId = capture.findCommitId(state);
+  const message = commitId ? state.commits[commitId]?.message.trim() : undefined;
+  return message ? { slot: capture.slot, message } : null;
+};
 
 // Pametni asistent: ako student unese tačnu komandu ali sa pogrešnim imenom/argumentom ili redosledom,
 // Gitko ga pohvali i prijateljski uputi na tačan naziv koji se traži u zadatku.

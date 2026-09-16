@@ -1,3 +1,7 @@
+// Sekcije sajta koje commit dodaje. Live pregledač i pull ih prepoznaju po ovoj oznaci,
+// a ne po tekstu poruke — student može sam da napiše bilo kakvu poruku.
+export type SiteFeature = 'about' | 'menu' | 'contact';
+
 export interface Commit {
   id: string;
   parentIds: string[];
@@ -5,6 +9,7 @@ export interface Commit {
   author?: string;
   date?: string;
   isRemote?: boolean;
+  features?: SiteFeature[];
 }
 
 export interface RepoState {
@@ -606,9 +611,14 @@ export const executeGitCommand = (
       let msg = '';
       const mIdx = parts.indexOf('-m');
       if (mIdx !== -1 && parts[mIdx + 1]) {
-        const fullMsgPart = commandLine.substring(commandLine.indexOf('-m') + 2).trim();
-        const match = fullMsgPart.match(/^["']([^"']*)["']/);
-        msg = match ? match[1] : parts.slice(mIdx + 1).join(' ').replace(/^["']|["']$/g, '');
+        // Text after the standalone `-m` flag (not a `-m` inside another word or flag)
+        const afterFlag = trimmed.slice(trimmed.search(/(^|\s)-m(\s|$)/)).replace(/^\s*-m\s+/, '');
+        // Matching quote pairs, so `-m "Dodaj 'meni'"` keeps the inner apostrophes
+        const quoted = afterFlag.match(/^"([^"]*)"|^'([^']*)'/);
+        msg = (quoted
+          ? (quoted[1] ?? quoted[2])
+          : afterFlag.split(/\s+--?[A-Za-z]/)[0].replace(/^["']|["']$/g, '')
+        ).trim();
       }
 
       const currentBranch = state.head.type === 'branch' ? state.head.target : 'main';
@@ -1456,11 +1466,9 @@ export const executeGitCommand = (
 
       // Check current commit
       const currentCommitId = state.branches[branch] || '';
-      const pulledMessage = 'Dodaj "O nama" sekciju na Kafić Luna sajt (od saradnika)';
-
-      // The simulated remote only has one new commit; once it's in local history there's nothing to pull
+      // The simulated remote only adds the "O nama" section; once it's in local history there's nothing to pull
       const alreadyPulled = [...getAncestorIds(state.commits, currentCommitId)]
-        .some(id => state.commits[id]?.message === pulledMessage);
+        .some(id => state.commits[id]?.features?.includes('about'));
       if (alreadyPulled) {
         return {
           newState: state,
@@ -1474,8 +1482,9 @@ export const executeGitCommand = (
       const pulledCommit: Commit = {
         id: newCommitId,
         parentIds: currentCommitId ? [currentCommitId] : [],
-        message: pulledMessage,
+        message: 'Dodaj "O nama" sekciju na Kafić Luna sajt (od saradnika)',
         author: 'Iva <iva@kafic-luna.rs>',
+        features: ['about'],
         date: new Date().toLocaleDateString('sr-RS')
       };
 
