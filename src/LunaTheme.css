@@ -215,6 +215,33 @@ body {
   user-select: none;
 }
 
+/* Mobile-only window switcher (‹ ›) — hidden on desktop, where the taskbar already switches
+   windows comfortably; shown in its place under @media (max-width: 768px). */
+.xp-window-cycle-controls {
+  display: none;
+  align-items: center;
+  gap: 2px;
+  margin-right: 8px;
+  user-select: none;
+}
+
+.xp-cycle-btn {
+  height: 26px;
+  min-width: 26px;
+  border: 1px solid #7ea7fc;
+  border-radius: 3px;
+  background: linear-gradient(to bottom, #fcfcfc 0%, #e0dfdb 100%);
+  color: #333;
+  font-size: 13px;
+  font-weight: bold;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.xp-cycle-btn:active {
+  background: linear-gradient(to bottom, #c8c7c1 0%, #e8e7e1 100%);
+}
+
 .xp-zoom-btn {
   height: 19px;
   min-width: 19px;
@@ -1081,6 +1108,16 @@ body {
 
   .xp-window-title {
     font-size: 12px !important;
+  }
+
+  /* Ctrl +/-/0 zoom shortcuts don't apply well on mobile and the title bar is tight —
+     make room for the window-switch arrows instead. */
+  .xp-window-zoom-controls {
+    display: none !important;
+  }
+
+  .xp-window-cycle-controls {
+    display: flex !important;
   }
 
   .xp-window-controls {

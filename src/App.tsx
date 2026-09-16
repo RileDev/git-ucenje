@@ -15,6 +15,7 @@ import { SolitaireCascade } from './components/SolitaireCascade';
 import { Gitko } from './components/Gitko';
 import { LevelSuccessModal } from './components/LevelSuccessModal';
 import { ConfirmResetModal } from './components/ConfirmResetModal';
+import { IntroSpotlight } from './components/IntroSpotlight';
 import { DesktopIcons } from './components/DesktopIcons';
 import { Taskbar } from './components/Taskbar';
 import { StartMenu } from './components/StartMenu';
@@ -209,6 +210,10 @@ const computeInitialWindows = (): WindowState[] => {
   ];
 };
 
+// Order used by the mobile ‹ › title-bar switcher — the windows a lesson actually needs,
+// left to right in the order a student would naturally move through them.
+const MOBILE_CYCLE_ORDER = ['instructions', 'terminal', 'graph', 'projectExplorer', 'liveBrowser'];
+
 const RESIZABLE_IDS = new Set([
   'instructions',
   'terminal',
@@ -372,6 +377,11 @@ export const App: React.FC = () => {
   const [showSolitaire, setShowSolitaire] = useState(false);
   const [showLevelSuccessModal, setShowLevelSuccessModal] = useState(false);
   const [showConfirmReset, setShowConfirmReset] = useState(false);
+  // One-time first-load spotlight pointing at the terminal — desktop only (mobile already shows
+  // one window at a time full-screen, so the "which window do I look at" problem doesn't apply).
+  const [hasSeenIntro, setHasSeenIntro] = useState<boolean>(
+    () => localStorage.getItem('luna_git_seen_intro') === 'true'
+  );
   const [timeStr, setTimeStr] = useState('');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
@@ -445,6 +455,7 @@ export const App: React.FC = () => {
   useEffect(() => { localStorage.setItem('luna_git_commit_messages', JSON.stringify(userCommitMessages)); }, [userCommitMessages]);
   useEffect(() => { localStorage.setItem('luna_git_hints_opened', JSON.stringify(hintsOpened)); }, [hintsOpened]);
   useEffect(() => { localStorage.setItem('luna_git_reset_counts', JSON.stringify(resetCounts)); }, [resetCounts]);
+  useEffect(() => { if (hasSeenIntro) localStorage.setItem('luna_git_seen_intro', 'true'); }, [hasSeenIntro]);
   useEffect(() => () => {
     if (successTimerRef.current) clearTimeout(successTimerRef.current);
   }, []);
@@ -516,6 +527,17 @@ export const App: React.FC = () => {
     document.addEventListener('mouseup', handleGlobalResizeMouseUp);
   };
 
+  // Mobile only: the taskbar's window icons are small touch targets, so give the active
+  // window's own title bar a ‹ › way to step through the lesson-relevant windows instead.
+  const cycleMobileWindow = (direction: 1 | -1) => {
+    const openInOrder = MOBILE_CYCLE_ORDER.filter(id => windows.find(w => w.id === id)?.isOpen);
+    if (openInOrder.length === 0) return;
+    const activeId = windows.find(w => w.active)?.id;
+    const currentIdx = activeId ? openInOrder.indexOf(activeId) : -1;
+    const nextIdx = (currentIdx === -1 ? 0 : currentIdx + direction + openInOrder.length) % openInOrder.length;
+    wm.focusWindow(openInOrder[nextIdx]);
+  };
+
   // ── Window control wrappers ───────────────────────────────────────────────
   const focusWindow = (id: string) => { wm.focusWindow(id); setIsStartOpen(false); };
   const toggleWindow = (id: string) => { wm.toggleWindow(id); setIsStartOpen(false); };
@@ -527,6 +549,15 @@ export const App: React.FC = () => {
     if (win.isMinimized) wm.focusWindow(win.id);
     else if (win.active) wm.minimizeWindow(win.id);
     else wm.focusWindow(win.id);
+  };
+
+  // Typing the first character anywhere in the terminal dismisses the one-time intro spotlight,
+  // same as clicking its "Razumem" button — done here (at the actual input event) rather than in
+  // an effect reacting to terminalInput, since that would just be setState-in-effect for
+  // deriving one value from another.
+  const handleTerminalInputChange = (value: string) => {
+    setTerminalInput(value);
+    if (value && !hasSeenIntro) setHasSeenIntro(true);
   };
 
   // ── Terminal submit ───────────────────────────────────────────────────────
@@ -788,6 +819,8 @@ export const App: React.FC = () => {
             onMaximize={handleMaximize}
             onTitleBarMouseDown={handleTitleBarMouseDown}
             onResizeMouseDown={handleResizeMouseDown}
+            onCyclePrev={() => cycleMobileWindow(-1)}
+            onCycleNext={() => cycleMobileWindow(1)}
           >
             {win.id === 'instructions' && (
               <InstructionsWindow
@@ -833,7 +866,7 @@ export const App: React.FC = () => {
                 currentLevel={currentLevel}
                 terminalHistory={terminalHistory}
                 terminalInput={terminalInput}
-                setTerminalInput={setTerminalInput}
+                setTerminalInput={handleTerminalInputChange}
                 onSubmit={handleTerminalSubmit}
                 onResetLevel={resetCurrentLevel}
                 onUndo={handleUndoCommand}
@@ -927,6 +960,13 @@ export const App: React.FC = () => {
         onCancel={() => setShowConfirmReset(false)}
         onConfirm={handleConfirmedResetAll}
       />
+
+      {!hasSeenIntro && !isMobile && (
+        <IntroSpotlight
+          terminalWindow={windows.find(w => w.id === 'terminal')}
+          onDismiss={() => setHasSeenIntro(true)}
+        />
+      )}
 
       <Taskbar
         windows={windows}

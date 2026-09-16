@@ -15,6 +15,8 @@ interface XpWindowProps {
   onMaximize: (id: string, e: React.MouseEvent) => void;
   onTitleBarMouseDown: (id: string, e: React.MouseEvent) => void;
   onResizeMouseDown: (id: string, e: React.MouseEvent) => void;
+  onCyclePrev?: () => void;
+  onCycleNext?: () => void;
   children: React.ReactNode;
 }
 
@@ -32,6 +34,8 @@ export const XpWindow: React.FC<XpWindowProps> = ({
   onMaximize,
   onTitleBarMouseDown,
   onResizeMouseDown,
+  onCyclePrev,
+  onCycleNext,
   children,
 }) => {
   const isFocused = win.active;
@@ -56,6 +60,16 @@ export const XpWindow: React.FC<XpWindowProps> = ({
             <span className="xp-window-title-icon">{win.icon}</span>
           )}
           <span>{win.title}</span>
+        </div>
+
+        {/* Mobile-only window switcher — swapped in for the zoom controls via CSS media query */}
+        <div className="xp-window-cycle-controls" onClick={(e) => e.stopPropagation()}>
+          <button type="button" className="xp-cycle-btn" title="Prethodni prozor" onClick={() => onCyclePrev && onCyclePrev()}>
+            ‹
+          </button>
+          <button type="button" className="xp-cycle-btn" title="Sledeći prozor" onClick={() => onCycleNext && onCycleNext()}>
+            ›
+          </button>
         </div>
 
         {/* Titlebar Accessibility Zoom Controls */}
