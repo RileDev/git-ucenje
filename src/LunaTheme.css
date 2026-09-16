@@ -1267,3 +1267,32 @@ body {
 .xp-explorer-flash {
   animation: explorer-flash-pulse 0.9s ease-out;
 }
+
+/* Confetti burst on the level-success dialog — pure CSS, no library, fixed piece count so it's
+   deterministic (same run every time, easy to reason about, no layout thrash). */
+.xp-confetti-layer {
+  position: absolute;
+  top: -20px;
+  left: 0;
+  width: 100%;
+  height: 0;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 1;
+}
+
+.xp-confetti-piece {
+  position: absolute;
+  top: 0;
+  width: 7px;
+  height: 12px;
+  opacity: 0.9;
+  animation-name: confetti-fall;
+  animation-timing-function: ease-in;
+  animation-fill-mode: forwards;
+}
+
+@keyframes confetti-fall {
+  0%   { transform: translateY(0) rotate(var(--confetti-rotate, 0deg)); opacity: 0.9; }
+  100% { transform: translateY(220px) rotate(calc(var(--confetti-rotate, 0deg) + 340deg)); opacity: 0; }
+}

@@ -14,6 +14,7 @@ import { Bsod } from './components/Bsod';
 import { SolitaireCascade } from './components/SolitaireCascade';
 import { Gitko } from './components/Gitko';
 import { LevelSuccessModal } from './components/LevelSuccessModal';
+import { ConfirmResetModal } from './components/ConfirmResetModal';
 import { DesktopIcons } from './components/DesktopIcons';
 import { Taskbar } from './components/Taskbar';
 import { StartMenu } from './components/StartMenu';
@@ -370,6 +371,7 @@ export const App: React.FC = () => {
   const [showBSOD, setShowBSOD] = useState(false);
   const [showSolitaire, setShowSolitaire] = useState(false);
   const [showLevelSuccessModal, setShowLevelSuccessModal] = useState(false);
+  const [showConfirmReset, setShowConfirmReset] = useState(false);
   const [timeStr, setTimeStr] = useState('');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
@@ -670,16 +672,19 @@ export const App: React.FC = () => {
   };
 
   const resetAllProgress = () => {
-    if (window.confirm('Da li ste sigurni da želite da obrišete kompletan napredak u učenju?')) {
-      setCompletedLevels([]);
-      setUserCommitMessages({});
-      setHintsOpened({});
-      setResetCounts({});
-      loadLevel(0);
-      setShowSolitaire(false);
-      setIsStartOpen(false);
-      setWindows(computeInitialWindows());
-    }
+    setIsStartOpen(false);
+    setShowConfirmReset(true);
+  };
+
+  const handleConfirmedResetAll = () => {
+    setShowConfirmReset(false);
+    setCompletedLevels([]);
+    setUserCommitMessages({});
+    setHintsOpened({});
+    setResetCounts({});
+    loadLevel(0);
+    setShowSolitaire(false);
+    setWindows(computeInitialWindows());
   };
 
   const resetCurrentLevel = () => {
@@ -915,6 +920,12 @@ export const App: React.FC = () => {
         levelTitle={currentLevel.title}
         onClose={() => setShowLevelSuccessModal(false)}
         onNext={handleNextLevel}
+      />
+
+      <ConfirmResetModal
+        open={showConfirmReset}
+        onCancel={() => setShowConfirmReset(false)}
+        onConfirm={handleConfirmedResetAll}
       />
 
       <Taskbar

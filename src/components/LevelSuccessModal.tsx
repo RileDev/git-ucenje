@@ -22,6 +22,16 @@ export const LevelSuccessModal: React.FC<Props> = ({ open, levelTitle, onClose, 
 
   if (!open) return null;
 
+  // Fixed confetti pieces — period-appropriate colors, CSS-only, no library.
+  const confettiColors = ['#3b82f6', '#facc15', '#22c55e', '#ef4444', '#a855f7', '#fb923c'];
+  const confettiPieces = Array.from({ length: 24 }, (_, i) => ({
+    left: (i * 41 + 7) % 100,
+    delay: (i % 8) * 0.08,
+    duration: 1.6 + (i % 5) * 0.25,
+    color: confettiColors[i % confettiColors.length],
+    rotate: (i * 53) % 360,
+  }));
+
   return (
     <div
       style={{
@@ -35,9 +45,27 @@ export const LevelSuccessModal: React.FC<Props> = ({ open, levelTitle, onClose, 
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        overflow: 'hidden',
       }}
     >
-      <div className="xp-window" style={{ width: 380, position: 'relative' }}>
+      <div className="xp-window" style={{ width: 380, position: 'relative', overflow: 'visible' }}>
+        <div className="xp-confetti-layer" aria-hidden="true">
+          {confettiPieces.map((p, i) => (
+            <span
+              key={i}
+              className="xp-confetti-piece"
+              style={{
+                left: `${p.left}%`,
+                backgroundColor: p.color,
+                animationDelay: `${p.delay}s`,
+                animationDuration: `${p.duration}s`,
+                // Consumed by the confetti-fall keyframe (a plain inline `transform` would be
+                // overridden by the animation's own transform values from frame 0).
+                ['--confetti-rotate' as string]: `${p.rotate}deg`,
+              }}
+            />
+          ))}
+        </div>
         <div className="xp-window-titlebar">
           <div className="xp-window-title"><span>🎉 Nivo rešen!</span></div>
           <div className="xp-window-controls">
