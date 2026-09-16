@@ -85,8 +85,9 @@ export const TerminalWindow: React.FC<Props> = ({
           className="xp-button"
           onClick={(e) => {
             e.stopPropagation();
+            // Only the conceptual hint — the exact command stays behind Hint 2 in the lesson window
             const hintText = currentLevel.hint1
-              ? `${currentLevel.hint1}${currentLevel.hint2 ? '\nKljuč: ' + currentLevel.hint2 : ''}`
+              ? `${currentLevel.hint1}${currentLevel.isReadingOnly ? '' : '\nAko zapneš, tačnu komandu možeš otključati u Hint 2 u prozoru sa uputstvom.'}`
               : 'Pročitaj uputstvo za lekciju na levoj strani ekrana!';
             setGitkoMsg(hintText);
             if (soundEnabled) playTone(440, 0, 0.1, 'sine');

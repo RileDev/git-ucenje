@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { executeGitCommand } from './gitEngine';
 import type { RepoState } from './gitEngine';
-import { captureUserCommitMessage, getGitkoSmartAdvice, getLevelInitialState, levels } from './levelsData';
+import { captureUserCommitMessage, describeMissingSteps, getGitkoSmartAdvice, getLevelInitialState, levels } from './levelsData';
 import type { UserCommitMessages } from './levelsData';
 import type { Level } from './levelsData';
 import { GitGraph } from './GitGraph';
@@ -592,7 +592,7 @@ export const App: React.FC = () => {
             }
             return !updatedCommandsRun.includes(cleaned);
           });
-          const msg = `Skoro gotovo! Preostalo je da isprobaš i komandu: ${missingCmds.join(', ')}!`;
+          const msg = `Skoro gotovo! 👏 Ostalo je još da ${describeMissingSteps(missingCmds)}.`;
           setTaskMsg(msg);
           setGitkoMsg(msg);
         } else {

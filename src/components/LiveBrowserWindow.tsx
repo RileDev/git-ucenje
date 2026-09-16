@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { WindowState } from '../types';
 import type { RepoState, SiteFeature } from '../gitEngine';
-import { getAncestorIds, getCurrentCommitId } from '../gitEngine';
+import { getActiveCommitIds } from '../gitEngine';
 import type { Level } from '../levelsData';
 
 interface Props {
@@ -20,13 +20,13 @@ export const LiveBrowserWindow: React.FC<Props> = ({
   const [activeTab, setActiveTab] = useState<'home' | 'about' | 'menu' | 'contact'>('home');
   const [orderedItem, setOrderedItem] = useState<string | null>(null);
 
-  // The site shows only what is in the checked-out history (HEAD and its ancestors),
-  // so e.g. the menu disappears when switching back to an unmerged main.
-  // Uses commit `features`, not message text — students write their own commit messages.
-  const reachableFeatures = new Set<SiteFeature>(
-    [...getAncestorIds(repoState.commits, getCurrentCommitId(repoState))]
-      .flatMap(id => repoState.commits[id]?.features ?? [])
-  );
+  // The site shows only what is in the checked-out history (HEAD and its ancestors, minus reverted
+  // commits), so e.g. the menu disappears when switching back to an unmerged main.
+  // Uses commit `features`/`breaks`, not message text — students write their own commit messages.
+  const activeCommits = [...getActiveCommitIds(repoState)].map(id => repoState.commits[id]);
+  const reachableFeatures = new Set<SiteFeature>(activeCommits.flatMap(c => c?.features ?? []));
+  // Sections whose nav link is broken by a commit that hasn't been reverted (Nivo 2, Lekcija 7)
+  const brokenLinks = new Set<SiteFeature>(activeCommits.flatMap(c => c?.breaks ?? []));
 
   // Each feature unlocks in its own lesson; later lessons (id past that lesson) always show it.
   const hasAbout =
@@ -191,7 +191,7 @@ export const LiveBrowserWindow: React.FC<Props> = ({
                   animation: 'fadeIn 0.5s ease',
                 }}
               >
-                Meni 📋
+                {brokenLinks.has('menu') ? 'Meni ⚠️' : 'Meni 📋'}
               </span>
             )}
 
@@ -287,7 +287,7 @@ export const LiveBrowserWindow: React.FC<Props> = ({
           )}
 
           {/* O nama / About */}
-          {visibleTab === 'about' && (
+          {visibleTab === 'about' && !brokenLinks.has('about') && (
             <div style={{ backgroundColor: '#ffffff', padding: 16, borderRadius: 8, border: '1px solid #eedbc5' }}>
               <h3 style={{ margin: '0 0 8px 0', fontSize: 15, color: '#3d2314' }}>📖 O Nama — Kafić Luna</h3>
               <p style={{ fontSize: 11.5, color: '#5a3d28', lineHeight: 1.6 }}>
@@ -297,8 +297,19 @@ export const LiveBrowserWindow: React.FC<Props> = ({
             </div>
           )}
 
+          {/* Broken nav link -> 404 page */}
+          {visibleTab !== 'home' && brokenLinks.has(visibleTab) && (
+            <div style={{ backgroundColor: '#ffffff', padding: 20, borderRadius: 8, border: '1px dashed #f87171', textAlign: 'center' }}>
+              <div style={{ fontSize: 34, marginBottom: 6 }}>🚧</div>
+              <h3 style={{ margin: '0 0 6px 0', fontSize: 18, color: '#b91c1c' }}>404 — Stranica nije pronađena</h3>
+              <p style={{ margin: 0, fontSize: 11.5, color: '#5a3d28', lineHeight: 1.5 }}>
+                Link u navigaciji vodi na <code>#menii</code>, a takva sekcija ne postoji na sajtu.
+              </p>
+            </div>
+          )}
+
           {/* Meni / Menu */}
-          {visibleTab === 'menu' && (
+          {visibleTab === 'menu' && !brokenLinks.has('menu') && (
             <div style={{ backgroundColor: '#ffffff', padding: 16, borderRadius: 8, border: '1px solid #eedbc5' }}>
               <h3 style={{ margin: '0 0 10px 0', fontSize: 15, color: '#3d2314' }}>📋 Meni & Cenovnik</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -332,7 +343,7 @@ export const LiveBrowserWindow: React.FC<Props> = ({
           )}
 
           {/* Kontakt / Contact */}
-          {visibleTab === 'contact' && (
+          {visibleTab === 'contact' && !brokenLinks.has('contact') && (
             <div style={{ backgroundColor: '#ffffff', padding: 16, borderRadius: 8, border: '1px solid #eedbc5' }}>
               <h3 style={{ margin: '0 0 10px 0', fontSize: 15, color: '#3d2314' }}>✉️ Kontaktirajte Kafić Luna</h3>
               <div style={{ fontSize: 11, color: '#5a3d28', marginBottom: 10 }}>

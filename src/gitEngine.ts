@@ -10,6 +10,10 @@ export interface Commit {
   date?: string;
   isRemote?: boolean;
   features?: SiteFeature[];
+  // Sekcije čiji link u navigaciji ovaj commit kvari (npr. pogrešan href)
+  breaks?: SiteFeature[];
+  // Commit koji ovaj commit poništava (postavlja git revert)
+  revertOf?: string;
 }
 
 export interface RepoState {
@@ -194,6 +198,22 @@ export const getAncestorIds = (commits: { [id: string]: Commit }, startId: strin
     commits[id]?.parentIds.forEach(pId => stack.push(pId));
   }
   return visited;
+};
+
+// Commit-ovi iz trenutne istorije čije izmene i dalje važe: dostupni iz HEAD-a i nisu poništeni
+// revert-om (revert revert-a ponovo vraća originalne izmene).
+export const getActiveCommitIds = (state: RepoState): Set<string> => {
+  const reachable = [...getAncestorIds(state.commits, getCurrentCommitId(state))];
+  const memo = new Map<string, boolean>();
+  const isActive = (id: string): boolean => {
+    const known = memo.get(id);
+    if (known !== undefined) return known;
+    memo.set(id, true); // guard against revert cycles
+    const reverted = reachable.some(r => state.commits[r]?.revertOf === id && isActive(r));
+    memo.set(id, !reverted);
+    return !reverted;
+  };
+  return new Set(reachable.filter(isActive));
 };
 
 export const hasConflictMarkers = (content: string | undefined): boolean =>
@@ -1279,7 +1299,8 @@ export const executeGitCommand = (
         parentIds: currentCommitId ? [currentCommitId] : [],
         message: `Revert "${targetCommit.message}"`,
         author: userSignature,
-        date: new Date().toLocaleDateString('sr-RS')
+        date: new Date().toLocaleDateString('sr-RS'),
+        revertOf: commitToRevertId
       };
 
       const newState: RepoState = {
