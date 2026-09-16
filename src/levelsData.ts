@@ -26,6 +26,13 @@ export interface Level {
     hasFavicon?: boolean;
     tag?: string;
   };
+  // Reflection question shown after the lesson is solved — never gates progression, just checks understanding
+  comprehensionCheck?: {
+    question: string;
+    options: string[];
+    answerIndex: number;
+    explanation: string;
+  };
 }
 
 export const levels: Level[] = [
@@ -328,7 +335,9 @@ Staging zona (index) je Git-ova "čekaonica" — mesto gde biraš *tačno* šta 
 Fajlovi čekaju u staging zoni. Sledeći korak je da to stanje trajno sačuvaš kao prvi zvanični snimak projekta Kafić Luna.
 
 ### Zašto je ovo bitno
-Commit je "vremenska kapsula" — tačka u istoriji na koju se uvek možeš vratiti. Poruka uz commit (\`-m\`) nije formalnost: to je beleška o tome šta je urađeno.`,
+Commit je "vremenska kapsula" — tačka u istoriji na koju se uvek možeš vratiti. Poruka uz commit (\`-m\`) nije formalnost: to je beleška o tome šta je urađeno.
+
+💡 Usput: svaki commit u sebi nosi i potpis autora. Pre prvog commit-a na pravom projektu, obično podesiš svoj identitet komandom \`git config user.name "Tvoje Ime"\` — probaj je slobodno, nije obavezna za ovu lekciju, ali ćeš je videti u pravim projektima.`,
     initialState: {
       isInitialized: true,
       commits: {},
@@ -663,7 +672,18 @@ Konflikti se dešavaju čim dvoje ljudi (ili ti i AI asistent) nezavisno promene
       );
     },
     expectedCommands: ["git merge", "git add", "git commit"],
-    livePreview: { hasAbout: true, hasMenu: true, hasContact: false }
+    livePreview: { hasAbout: true, hasMenu: true, hasContact: false },
+    comprehensionCheck: {
+      question: "Commit koji si upravo napravio/la ima DVA roditelja (parentIds) umesto jednog. Zašto?",
+      options: [
+        "Zato što je to prvi commit u istoriji projekta.",
+        "Zato što je to merge commit — spaja istoriju dve grane koje su se razišle (main i kontakt-forma) u jednu tačku.",
+        "Zato što je fajl imao konflikt, pa Git čuva obe verzije zauvek.",
+        "To je greška — svaki commit sme imati samo jednog roditelja.",
+      ],
+      answerIndex: 1,
+      explanation: "Svaki 'obični' commit ima jednog roditelja (prethodni commit na toj grani). Merge commit je izuzetak — ima onoliko roditelja koliko grana spaja, ovde dve: poslednji commit sa main i poslednji commit sa kontakt-forma.",
+    }
   },
   {
     id: 15,
@@ -708,7 +728,18 @@ Kad radiš na pravom serveru bez GUI alata, ova kombinacija opcija ti daje grafi
       );
     },
     expectedCommands: ["git log"],
-    livePreview: { hasAbout: true, hasMenu: true, hasContact: true }
+    livePreview: { hasAbout: true, hasMenu: true, hasContact: true },
+    comprehensionCheck: {
+      question: "U ispisu vidiš dve grane, meni-sekcija i kontakt-forma, kako se spajaju u jednu tačku (C5) na main grani. Šta se dešava sa meni-sekcija i kontakt-forma nakon merge-a?",
+      options: [
+        "Automatski se brišu, jer više nisu potrebne.",
+        "I dalje postoje i i dalje pokazuju na svoje stare commit-ove (C3 i C4) — merge samo pomera main napred, grane ostaju gde su bile.",
+        "Postaju iste kao main grana i menjaju ime u main.",
+        "Prestaju da se pojavljuju u git log dok se ručno ne obrišu iz istorije.",
+      ],
+      answerIndex: 1,
+      explanation: "Merge ne dira grane koje spaja — one i dalje pokazuju na svoj poslednji commit. Zato se u grafu i dalje vide meni-sekcija (C3) i kontakt-forma (C4), odvojeno od main (C5). Grana se briše samo eksplicitno, sa git branch -d.",
+    }
   },
   {
     id: 16,
@@ -886,8 +917,8 @@ Umesto da praviš "smeće" commit samo da bi promenio/la granu, \`stash\` privre
     category: "Nivo 2: Srednji nivo",
     story: "Upravo si commit-ovao/la sa porukom 'fix bag' — nejasno, i primetio/la si da si zaboravio/la da dodaš favicon.ico, koji je trebalo da bude deo istog commit-a.",
     whyItMatters: "Za sitne tek napravljene greške ne mora se praviti nov commit. --amend ti omogućava da prepraviš poslednji commit kao da si ga od početka dobro napravio/la.",
-    task: "Dodaj zaboravljeni fajl favicon.ico i ispravi poruku poslednjeg commit-a bez pravljenja novog.",
-    hint1: "Dodaj favicon.ico pomoću git add, a zatim commit-uj uz opciju --amend.",
+    task: "Ovde ispravljaš DVE stvari u istom commit-u: 1) fajl koji nedostaje i 2) nejasnu poruku. Prvo pripremi favicon.ico kao i svaki drugi fajl, a zatim prepravi poslednji commit — u istom potezu mu daj i jasniju poruku.",
+    hint1: "1. Prvi problem (nedostaje fajl): pripremi favicon.ico na isti način kao svaki drugi fajl.\n2. Drugi problem (nejasna poruka): commit ne pravi novi — prepravlja poslednji, opcijom koja doslovno znači 'ispravi/dopuni' (amend).",
     hint2: "git add favicon.ico\ngit commit --amend -m \"Popravi link ka meniju i dodaj favicon\"",
     expectedResult: "Vizuelni Git Graf i dalje prikazuje isti broj commit-ova — poslednji je zamenjen ispravljenom verzijom. favicon.ico je postao deo commit-a i prikazuje se u Live Browseru!",
     quickOverview: "git commit --amend — menja sadržaj i/ili poruku poslednjeg commit-a.",

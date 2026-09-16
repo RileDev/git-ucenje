@@ -43,6 +43,8 @@ export interface RepoState {
   stash?: { staged: string[]; modified: string[]; untracked: string[]; fileContents?: { [f: string]: string } }[];
   tags?: { [name: string]: string };
   mergeInProgress?: { branch: string; commitId: string; conflictFile?: string };
+  // Ime postavljeno komandom `git config user.name` — ima prednost nad imenom iz Control Panel-a
+  configuredUserName?: string;
 }
 
 // Podrazumevani sadržaj fajlova sajta (koristi se kad lekcija ne definiše svoj fileContents)
@@ -283,7 +285,7 @@ export const executeGitCommand = (
   commandLine: string,
   currentUserName: string = 'Luka'
 ): { newState: RepoState; output: string; error: boolean } => {
-  const userSignature = formatAuthorSignature(currentUserName);
+  const userSignature = formatAuthorSignature(state.configuredUserName || currentUserName);
   const trimmed = commandLine.trim();
   if (!trimmed) {
     return { newState: state, output: '', error: false };
@@ -382,7 +384,7 @@ export const executeGitCommand = (
 
   const isInitialized = state.isInitialized === true || Object.keys(state.commits).length > 0 || state.head.target !== '' || state.branches['main'] !== undefined || state.branches['master'] !== undefined;
 
-  if (!isInitialized && !['init', 'clone', 'help'].includes(subCmd)) {
+  if (!isInitialized && !['init', 'clone', 'help', 'config'].includes(subCmd)) {
     return {
       newState: state,
       output: `fatal: nije git repozitorijum (ili bilo koji od roditeljskih direktorijuma): .git\nInicijalizujte repozitorijum pomoću komande 'git init'.`,
@@ -391,10 +393,37 @@ export const executeGitCommand = (
   }
 
   switch (subCmd) {
+    case 'config': {
+      const isUserName = parts.includes('user.name');
+      if (!isUserName) {
+        return {
+          newState: state,
+          output: `U ovoj aplikaciji je podržano samo: git config user.name "Tvoje Ime"`,
+          error: true
+        };
+      }
+      const afterFlag = trimmed.slice(trimmed.indexOf('user.name') + 'user.name'.length).trim();
+      const quoted = afterFlag.match(/^"([^"]*)"|^'([^']*)'/);
+      const name = (quoted ? (quoted[1] ?? quoted[2]) : afterFlag).trim();
+      if (!name) {
+        return {
+          newState: state,
+          output: `Korišćenje: git config user.name "Tvoje Ime"`,
+          error: true
+        };
+      }
+      return {
+        newState: { ...state, configuredUserName: name },
+        output: `Git identitet podešen: buduci commit-ovi će biti potpisani kao "${name}".`,
+        error: false
+      };
+    }
+
     case 'help': {
       return {
         newState: state,
         output: `Podržane Git komande u projektu "Kafić Luna":
+  config user.name "Ime"  Podešava ime kojim se potpisuju tvoji commit-ovi
   init                  Inicijalizuje novi prazan repozitorijum na grani 'main'
   status                Prikazuje stanje radnog stabla i pripremne zone (staging area)
   add <fajl> / add .    Dodaje fajlove u pripremnu zonu (staging area)

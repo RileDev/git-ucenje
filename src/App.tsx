@@ -239,6 +239,18 @@ export const App: React.FC = () => {
       typeof v === 'object' && v !== null && !Array.isArray(v) && Object.values(v).every(m => typeof m === 'string')
     )
   );
+  // Which hints each lesson's student has ever opened — persists across revisits, used for the
+  // small "👁 already viewed" marker and later folded into a per-lesson progress view.
+  const [hintsOpened, setHintsOpened] = useState<Record<number, { hint1: boolean; hint2: boolean }>>(() =>
+    readSavedJson('luna_git_hints_opened', {}, v => typeof v === 'object' && v !== null && !Array.isArray(v))
+  );
+  const handleHintOpened = useCallback((levelId: number, hint: 'hint1' | 'hint2') => {
+    setHintsOpened(prev => {
+      const current = prev[levelId] ?? { hint1: false, hint2: false };
+      if (current[hint]) return prev;
+      return { ...prev, [levelId]: { ...current, [hint]: true } };
+    });
+  }, []);
 
   // ── Repo / terminal state ─────────────────────────────────────────────────
   const [repoState, setRepoState] = useState<RepoState>(() => getLevelInitialState(currentLevel, userCommitMessages));
@@ -406,6 +418,7 @@ export const App: React.FC = () => {
   useEffect(() => { localStorage.setItem('luna_git_current_level', currentLevelIdx.toString()); }, [currentLevelIdx]);
   useEffect(() => { localStorage.setItem('luna_git_completed', JSON.stringify(completedLevels)); }, [completedLevels]);
   useEffect(() => { localStorage.setItem('luna_git_commit_messages', JSON.stringify(userCommitMessages)); }, [userCommitMessages]);
+  useEffect(() => { localStorage.setItem('luna_git_hints_opened', JSON.stringify(hintsOpened)); }, [hintsOpened]);
   useEffect(() => () => {
     if (successTimerRef.current) clearTimeout(successTimerRef.current);
   }, []);
@@ -516,6 +529,12 @@ export const App: React.FC = () => {
       currentHist[currentHist.length - 1].output = result.output;
       setTerminalHistory(currentHist);
 
+      // `git config user.name` updates the identity used to sign commits — keep the
+      // terminal prompt and Control Panel name in sync with it.
+      if (result.newState.configuredUserName && result.newState.configuredUserName !== userName) {
+        handleSaveUserName(result.newState.configuredUserName);
+      }
+
       const updatedCommandsRun = [...levelCommandsRun];
       const recordCommand = (c: string) => {
         if (!updatedCommandsRun.includes(c)) updatedCommandsRun.push(c);
@@ -625,6 +644,7 @@ export const App: React.FC = () => {
     if (window.confirm('Da li ste sigurni da želite da obrišete kompletan napredak u učenju?')) {
       setCompletedLevels([]);
       setUserCommitMessages({});
+      setHintsOpened({});
       loadLevel(0);
       setShowSolitaire(false);
       setIsStartOpen(false);
@@ -731,6 +751,8 @@ export const App: React.FC = () => {
                 currentLevel={currentLevel}
                 currentLevelIdx={currentLevelIdx}
                 completedLevels={completedLevels}
+                hintsOpened={hintsOpened[currentLevel.id] ?? { hint1: false, hint2: false }}
+                onHintOpened={(hint) => handleHintOpened(currentLevel.id, hint)}
                 onPrev={handlePrevLevel}
                 onNext={handleNextLevel}
                 onOpenVideo={() => wm.openWindow('videoLesson')}

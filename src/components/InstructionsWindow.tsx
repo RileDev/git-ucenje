@@ -10,24 +10,30 @@ interface Props {
   currentLevel: Level;
   currentLevelIdx: number;
   completedLevels: number[];
+  hintsOpened: { hint1: boolean; hint2: boolean };
+  onHintOpened: (hint: 'hint1' | 'hint2') => void;
   onPrev: () => void;
   onNext: () => void;
   onOpenVideo?: () => void;
 }
 
-// Hint state resets per lesson because App keys this component by the lesson session.
+// Hint open/closed UI state resets per lesson (App keys this component by the lesson session);
+// whether a hint was *ever* opened for this lesson is tracked in App and passed in as hintsOpened.
 export const InstructionsWindow: React.FC<Props> = ({
   win,
   isMobile,
   currentLevel,
   currentLevelIdx,
   completedLevels,
+  hintsOpened,
+  onHintOpened,
   onPrev,
   onNext,
   onOpenVideo,
 }) => {
   const [showHint1, setShowHint1] = useState(false);
   const [showHint2, setShowHint2] = useState(false);
+  const [checkAnswer, setCheckAnswer] = useState<number | null>(null);
 
   const actualWidth = isMobile
     ? window.innerWidth
@@ -108,7 +114,10 @@ export const InstructionsWindow: React.FC<Props> = ({
           {/* Hint 1 */}
           <div style={{ border: '1px solid #e2e8f0', borderRadius: 4, overflow: 'hidden' }}>
             <div
-              onClick={() => setShowHint1(!showHint1)}
+              onClick={() => {
+                if (!showHint1) onHintOpened('hint1');
+                setShowHint1(!showHint1);
+              }}
               style={{
                 backgroundColor: '#f8fafc',
                 padding: '5px 10px',
@@ -121,7 +130,10 @@ export const InstructionsWindow: React.FC<Props> = ({
                 color: '#334155',
               }}
             >
-              <span>💡 Hint 1 (Pojmovni nagoveštaj)</span>
+              <span>
+                💡 Hint 1 (Pojmovni nagoveštaj)
+                {hintsOpened.hint1 && <span title="Već pogledano" style={{ marginLeft: 6, opacity: 0.6 }}>👁</span>}
+              </span>
               <span>{showHint1 ? '▲ Sakrij' : '▼ Prikaži'}</span>
             </div>
             {showHint1 && (
@@ -134,7 +146,10 @@ export const InstructionsWindow: React.FC<Props> = ({
           {/* Hint 2 */}
           <div style={{ border: '1px solid #fed7aa', borderRadius: 4, overflow: 'hidden' }}>
             <div
-              onClick={() => setShowHint2(!showHint2)}
+              onClick={() => {
+                if (!showHint2) onHintOpened('hint2');
+                setShowHint2(!showHint2);
+              }}
               style={{
                 backgroundColor: '#fff7ed',
                 padding: '5px 10px',
@@ -147,7 +162,10 @@ export const InstructionsWindow: React.FC<Props> = ({
                 color: '#9a3412',
               }}
             >
-              <span>🔑 Hint 2 (Tačna komanda / Rešenje)</span>
+              <span>
+                🔑 Hint 2 (Tačna komanda / Rešenje)
+                {hintsOpened.hint2 && <span title="Već pogledano" style={{ marginLeft: 6, opacity: 0.6 }}>👁</span>}
+              </span>
               <span>{showHint2 ? '▲ Sakrij' : '▼ Otključaj'}</span>
             </div>
             {showHint2 && (
@@ -167,6 +185,78 @@ export const InstructionsWindow: React.FC<Props> = ({
           </div>
         </div>
       )}
+
+      {/* "Look here" confirmation — shown only after solving, so it never doubles as a hint */}
+      {!currentLevel.isReadingOnly && completedLevels.includes(currentLevel.id) && currentLevel.expectedResult && (
+        <div
+          style={{
+            backgroundColor: '#f0fdf4',
+            borderLeft: '4px solid #22c55e',
+            padding: '9px 12px',
+            marginBottom: 12,
+            borderRadius: '0 4px 4px 0',
+            fontSize: `${descFontSize}px`,
+          }}
+        >
+          <strong style={{ color: '#15803d', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 5 }}>
+            <span>✅</span>
+            <span>Šta da tražiš:</span>
+          </strong>
+          <div style={{ color: '#1e293b', lineHeight: 1.5 }}>{currentLevel.expectedResult}</div>
+        </div>
+      )}
+
+      {/* Comprehension check — a reflection question after solving, doesn't gate progression */}
+      {completedLevels.includes(currentLevel.id) && currentLevel.comprehensionCheck && (() => {
+        const check = currentLevel.comprehensionCheck;
+        return (
+          <div
+            style={{
+              border: '1px solid #c7d2fe',
+              borderRadius: 4,
+              padding: '9px 12px',
+              marginBottom: 12,
+              backgroundColor: '#eef2ff',
+              fontSize: `${descFontSize}px`,
+            }}
+          >
+            <strong style={{ color: '#3730a3', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 7 }}>
+              <span>🤔</span>
+              <span>Proveri razumevanje:</span>
+            </strong>
+            <div style={{ color: '#1e293b', marginBottom: 8 }}>{check.question}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {check.options.map((opt, idx) => (
+                <button
+                  key={idx}
+                  className="xp-button"
+                  disabled={checkAnswer !== null}
+                  onClick={() => setCheckAnswer(idx)}
+                  style={{
+                    padding: 7,
+                    textAlign: 'left',
+                    fontSize: `${descFontSize - 1}px`,
+                    backgroundColor:
+                      checkAnswer !== null && idx === check.answerIndex
+                        ? '#bbf7d0'
+                        : checkAnswer === idx
+                        ? '#fecaca'
+                        : '',
+                  }}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+            {checkAnswer !== null && (
+              <div style={{ marginTop: 8, fontSize: `${descFontSize - 1}px`, color: '#334155' }}>
+                {checkAnswer === check.answerIndex ? '✅ ' : '💡 '}
+                {check.explanation}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Quick Overview Pill */}
       {currentLevel.quickOverview && (
